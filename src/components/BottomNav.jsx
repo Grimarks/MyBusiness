@@ -15,7 +15,7 @@ export default function BottomNav({ active }) {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2">
             {tabs.map((tab) => {
                 const isActive = active === tab.label;
-                const iconPath = `/src/assets/${tab.icon}${isActive ? "" : "-gray"}.svg`;
+                const iconPath = `../src/assets/${tab.icon}${isActive ? "" : "-gray"}.svg`;
 
                 return (
                     <button
