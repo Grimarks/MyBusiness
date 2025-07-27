@@ -79,7 +79,7 @@ export default function FoodCard({
                 className="absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow-sm focus:outline-none"
             >
                 <img
-                    src={isLoved ? "/src/assets/Love.svg" : "/src/assets/Love-gray.svg"}
+                    src={isLoved ? "../assets/Love.svg" : "../assets/Love-gray.svg"}
                     alt="favorite"
                     className="h-6 w-6"
                 />
