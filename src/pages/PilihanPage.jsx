@@ -90,6 +90,11 @@ const PilihanPage = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
             <Header />
+            <img
+                src="/promo-2.png"
+                alt="Free Delivery Illustration"
+                className="object-contain flex-shrink-0 rounded-3xl p-3"
+            />
             <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
             {/* Filter lokasi (hanya tampil jika path /pilihan) */}

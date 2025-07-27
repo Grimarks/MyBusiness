@@ -1,89 +1,108 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ArrowLeftIcon,
-    BellIcon,
-    ShoppingCartIcon
-} from "@heroicons/react/24/outline";
-import BottomNav from '../components/BottomNav';
+    CurrencyDollarIcon,
+    GlobeAltIcon,
+    QuestionMarkCircleIcon,
+    ExclamationCircleIcon,
+    LockClosedIcon,
+    StarIcon,
+    ShareIcon
+} from "@heroicons/react/24/solid";
 import { useNavigate } from 'react-router-dom';
+import { auth, db } from '../firebaseConfig';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import BottomNav from '../components/BottomNav';
+import Header from "../components/Header.jsx";
 
 const AccountPage = () => {
     const navigate = useNavigate();
+    const [userData, setUserData] = useState({ nama: '', email: '' });
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setUserData({
+                        nama: data.nama || '',
+                        email: data.email || user.email || ''
+                    });
+                } else {
+                    setUserData({ nama: '', email: user.email });
+                }
+            } else {
+                navigate('/loginpage');
+            }
+        });
+
+        return () => unsubscribe();
+    }, [navigate]);
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            navigate('/loginpage');
+        } catch (error) {
+            console.error('Error signing out:', error);
+        }
+    };
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            <header className="bg-gradient-to-br from-orange-500 to-yellow-400 p-4 sticky top-0 z-40 shadow-md">
-                <div className="container mx-auto flex items-center justify-between max-w-2xl">
-                    <button onClick={() => navigate(-1)} className="text-white p-2 rounded-full hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors">
-                        <ArrowLeftIcon className="h-6 w-6" />
-                    </button>
-                    <h1 className="text-white text-lg font-semibold">Akun</h1>
-                    <div className="flex items-center space-x-3">
-                        <button className="text-white p-2 rounded-full hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors">
-                            <BellIcon className="h-6 w-6" />
-                        </button>
-                        <button className="text-white p-2 rounded-full hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors">
-                            <ShoppingCartIcon className="h-6 w-6" />
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <main className="container mx-auto p-4 max-w-2xl">
-                {/* Profile Section */}
-                <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-                    <h2 className="text-lg font-semibold mb-2">Informasi Profil</h2>
-                    <div className="flex items-center space-x-4">
+        <div className="relative min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
+            <Header></Header>
+            <div className="text-white pb-6 pt-10 px-6">
+                <div className="flex flex-col items-center mt-4">
+                    <div className="bg-white rounded-full p-2 mb-2">
                         <img
-                            src="/profile-placeholder.jpg" // Ganti dengan gambar profil pengguna
+                            src="/profile-placeholder.jpg"
                             alt="Profile"
-                            className="w-16 h-16 rounded-full"
+                            className="w-24 h-24 rounded-full object-cover"
                         />
-                        <div>
-                            <p className="text-gray-800 font-semibold">Nama Pengguna</p> {/* Ganti dengan nama pengguna */}
-                            <p className="text-gray-600 text-sm">email@example.com</p> {/* Ganti dengan email pengguna */}
-                        </div>
                     </div>
+                    <h1 className="text-xl font-bold">{userData.nama || 'Nama Pengguna'}</h1>
+                </div>
+            </div>
+
+            {/* Content box (putih penuh bawah) */}
+            <div className="bg-white rounded-t-3xl p-4 pb-28 min-h-[calc(100vh-200px)]">
+                <h2 className="text-lg font-bold text-black mb-4">Pengaturan umum</h2>
+                <div className="rounded-xl shadow-sm divide-y divide-gray-200 border border-gray-100">
+                    {[
+                        { label: 'Pointku', icon: CurrencyDollarIcon },
+                        { label: 'Bahasa', icon: GlobeAltIcon },
+                        { label: 'Tentang', icon: QuestionMarkCircleIcon },
+                        { label: 'Syarat dan Ketentuan', icon: ExclamationCircleIcon },
+                        { label: 'Layanan Privasi', icon: LockClosedIcon },
+                        { label: 'Nilai Aplikasi', icon: StarIcon },
+                        { label: 'Bagikan Aplikasi', icon: ShareIcon },
+                    ].map((item, idx) => (
+                        <div
+                            key={idx}
+                            className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer"
+                        >
+                            <div className="flex items-center space-x-3">
+                                <item.icon className="h-6 w-6 text-orange-500" />
+                                <span className="text-gray-800 font-medium">{item.label}</span>
+                            </div>
+                            <span className="text-orange-500 text-xl">›</span>
+                        </div>
+                    ))}
                 </div>
 
-                {/* Account Settings */}
-                <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-                    <h2 className="text-lg font-semibold mb-2">Pengaturan Akun</h2>
-                    <ul className="space-y-3">
-                        <li className="flex items-center justify-between py-2 border-b border-gray-200">
-                            <span>Ubah Password</span>
-                            <button className="text-orange-500">Ubah</button>
-                        </li>
-                        <li className="flex items-center justify-between py-2 border-b border-gray-200">
-                            <span>Notifikasi</span>
-                            <button className="text-orange-500">Atur</button>
-                        </li>
-                        <li className="flex items-center justify-between py-2">
-                            <span>Bahasa</span>
-                            <button className="text-orange-500">Indonesia</button>
-                        </li>
-                    </ul>
+                {/* Logout Button */}
+                <div className="text-center mt-8">
+                    <button
+                        onClick={handleLogout}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                        Log out
+                    </button>
                 </div>
-
-                {/* Other Actions */}
-                <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-                    <h2 className="text-lg font-semibold mb-2">Lainnya</h2>
-                    <ul className="space-y-3">
-                        <li className="flex items-center justify-between py-2 border-b border-gray-200">
-                            <span>Pusat Bantuan</span>
-                            <button className="text-orange-500">Buka</button>
-                        </li>
-                        <li className="flex items-center justify-between py-2 border-b border-gray-200">
-                            <span>Tentang Kami</span>
-                            <button className="text-orange-500">Baca</button>
-                        </li>
-                        <li className="flex items-center justify-between py-2">
-                            <span>Keluar</span>
-                            <button className="text-red-500">Keluar</button>
-                        </li>
-                    </ul>
-                </div>
-            </main>
+            </div>
 
             <BottomNav active="Akun" />
         </div>

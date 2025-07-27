@@ -72,12 +72,15 @@ export default function HomePage() {
 
     return (
         <div className="bg-gray-50 min-h-screen pb-16">
-            {/* Header */}
             <div
-                className="bg-cover bg-center h-64 sm:h-80 relative"
+                className="relative h-64 sm:h-80 bg-cover bg-center"
                 style={{ backgroundImage: `url('/Cookies.png')` }}
             >
-                <Header greeting="Hidupmu damai" subtitle="dengan satu suapan." />
+                <div className="absolute inset-0 bg-black/40 z-0" />
+
+                <div className="relative z-10">
+                    <Header greeting="Hidupmu damai" subtitle="dengan satu suapan." />
+                </div>
             </div>
 
             {/* Search and Filter */}
