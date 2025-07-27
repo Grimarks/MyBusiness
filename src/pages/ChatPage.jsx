@@ -1,62 +1,71 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-    ArrowLeftIcon,
-    BellIcon,
-    ShoppingCartIcon
-} from "@heroicons/react/24/outline";
-import BottomNav from "../components/BottomNav.jsx";
+import React, { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebaseConfig";
+import BottomNav from "../components/BottomNav";
+import Header from "../components/Header.jsx";
+import SearchBar from "../components/SearchBar.jsx";
 
 const ChatPage = () => {
-    const navigate = useNavigate();
+    const [chats, setChats] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchChats = async () => {
+            try {
+                const chatRef = collection(db, "dummyChats");
+                const snapshot = await getDocs(chatRef);
+                const data = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                setChats(data);
+            } catch (error) {
+                console.error("Gagal mengambil data chat:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchChats();
+    }, []);
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            <header className="bg-gradient-to-br from-orange-500 to-yellow-400 p-4 sticky top-0 z-40 shadow-md">
-                <div className="container mx-auto flex items-center justify-between max-w-2xl">
-                    <button onClick={() => navigate(-1)} className="text-white p-2 rounded-full hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors">
-                        <ArrowLeftIcon className="h-6 w-6" />
-                    </button>
-                    <h1 className="text-white text-lg font-semibold">Chat</h1>
-                    <div className="flex items-center space-x-3">
-                        <button className="text-white p-2 rounded-full hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors">
-                            <BellIcon className="h-6 w-6" />
-                        </button>
-                        <button className="text-white p-2 rounded-full hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors">
-                            <ShoppingCartIcon className="h-6 w-6" />
-                        </button>
-                    </div>
-                </div>
-            </header>
+        <div className="min-h-screen bg-gradient-to-b from-orange-500 to-yellow-400 pb-24">
+           <Header></Header>
+            <SearchBar></SearchBar>
 
-            <main className="container mx-auto p-4 max-w-2xl">
-                <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-                    <h2 className="text-lg font-semibold mb-2">Daftar Chat</h2>
-                    {/* Daftar Chat */}
-                    <div className="flex items-center space-x-4 py-3 border-b border-gray-200">
-                        <img
-                            src="/profile-placeholder.jpg" // Ganti dengan gambar profil lawan bicara
-                            alt="Profile"
-                            className="w-12 h-12 rounded-full"
-                        />
-                        <div>
-                            <p className="text-gray-800 font-semibold">Nama Lawan Bicara</p> {/* Ganti dengan nama lawan bicara */}
-                            <p className="text-gray-600 text-sm">Pesan terakhir...</p> {/* Ganti dengan pesan terakhir */}
+            {/* Chat List */}
+            <div className="px-4 mt-4 space-y-3">
+                {loading ? (
+                    <p className="text-white text-center">Loading chats...</p>
+                ) : chats.length === 0 ? (
+                    <p className="text-white text-center">Belum ada pesan.</p>
+                ) : (
+                    chats.map(chat => (
+                        <div
+                            key={chat.id}
+                            className="bg-white rounded-xl px-4 py-3 flex justify-between items-start shadow"
+                        >
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-full bg-gray-400" />
+                                <div>
+                                    <p className="font-semibold text-sm">{chat.name}</p>
+                                    <p className="text-gray-600 text-xs">{chat.message}</p>
+                                </div>
+                            </div>
+                            <div className="text-gray-500 text-xs whitespace-nowrap pl-2">
+                                {chat.time?.toDate().toLocaleString("id-ID", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                })}
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center space-x-4 py-3 border-b border-gray-200">
-                        <img
-                            src="/profile-placeholder.jpg" // Ganti dengan gambar profil lawan bicara
-                            alt="Profile"
-                            className="w-12 h-12 rounded-full"
-                        />
-                        <div>
-                            <p className="text-gray-800 font-semibold">Nama Lawan Bicara</p> {/* Ganti dengan nama lawan bicara */}
-                            <p className="text-gray-600 text-sm">Pesan terakhir...</p> {/* Ganti dengan pesan terakhir */}
-                        </div>
-                    </div>
-                </div>
-            </main>
+                    ))
+                )}
+            </div>
 
             <BottomNav active="Chat" />
         </div>
