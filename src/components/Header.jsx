@@ -35,7 +35,10 @@ export default function Header({ greeting, subtitle }) {
                 </div>
                 <br />
                 <h1 className="text-2xl font-bold sm:text-3xl">
-                    {greeting} <span className="text-yellow-400">{subtitle}</span>
+                    {greeting}
+                </h1>
+                <h1 className="text-2xl font-bold sm:text-3xl">
+                    <span className="text-yellow-400">{subtitle}</span>
                 </h1>
             </div>
         );

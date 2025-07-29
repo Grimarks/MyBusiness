@@ -4,108 +4,166 @@ import SearchBar from "../components/SearchBar";
 import CategoryFilter from "../components/CategoryFilter";
 import FoodCard from "../components/FoodCard";
 import BottomNav from "../components/BottomNav";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../firebaseConfig.js";
-import { auth } from "../firebaseConfig.js";
 import Loader from "../components/Loader";
+import EarningsCard from "../components/EarningsCard";
+import IncomingOrderCard from "../components/IncomingOrderCard";
 
-
+import {
+    collection,
+    getDocs,
+    query,
+    where,
+    doc,
+    getDoc,
+} from "firebase/firestore";
+import { db, auth } from "../firebaseConfig.js";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function HomePage() {
-    const [foods, setFoods] = useState([]);
+    const [role, setRole] = useState(null);
+    const [userId, setUserId] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [foods, setFoods] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [earnings, setEarnings] = useState(0);
     const [error, setError] = useState(null);
 
+    // Step 1: Pastikan user sudah login
     useEffect(() => {
-        const fetchFoods = async () => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                setUserId(user.uid);
+                try {
+                    const userRef = doc(db, "users", user.uid);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setRole(data.role || "pelanggan");
+                    } else {
+                        setRole("pelanggan");
+                    }
+                } catch (err) {
+                    console.error("Gagal mengambil role user:", err);
+                    setRole("pelanggan");
+                }
+            } else {
+                setUserId(null);
+                setRole("pelanggan");
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Step 2: Ambil data sesuai role
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!role || !userId) return;
             setLoading(true);
+
             try {
-                console.log("Fetching foods...");
-                const foodsCollection = collection(db, "foods");
-                const foodSnapshot = await getDocs(foodsCollection);
-                const rawFoodList = foodSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                }));
-                console.log("Fetched foods:", rawFoodList);
+                if (role === "pelanggan") {
+                    const foodsCollection = collection(db, "foods");
+                    const foodSnapshot = await getDocs(foodsCollection);
+                    const rawFoodList = foodSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                    }));
 
-                const userId = auth.currentUser?.uid || "guest";
-                console.log("Current user ID:", userId);
+                    const favoritesRef = collection(db, "favorites");
+                    const q = query(favoritesRef, where("userId", "==", userId));
+                    const favSnapshot = await getDocs(q);
+                    const favIds = favSnapshot.docs.map(doc => doc.data().foodId);
 
-                const favoritesRef = collection(db, "favorites");
-                const q = query(favoritesRef, where("userId", "==", userId));
-                const favSnapshot = await getDocs(q);
-                const favIds = favSnapshot.docs.map(doc => doc.data().foodId);
-                console.log("Favorite IDs:", favIds);
+                    const foodList = rawFoodList.map(food => ({
+                        ...food,
+                        isLoved: favIds.includes(food.id),
+                    }));
 
-                const foodList = rawFoodList.map(food => ({
-                    ...food,
-                    isLoved: favIds.includes(food.id),
-                }));
-                console.log("Final food list:", foodList);
+                    setFoods(foodList);
+                }
 
-                setFoods(foodList);
-            } catch (error) {
-                console.error("Error fetching foods:", error);
-                setError("Gagal memuat makanan.");
+                if (role === "pemilik") {
+                    const ordersRef = collection(db, "orders");
+                    const ordersSnap = await getDocs(ordersRef);
+                    const orderList = ordersSnap.docs
+                        .map(doc => ({ id: doc.id, ...doc.data() }))
+                        .filter(order => order.ownerId === userId || order.ownerName === auth.currentUser?.displayName); // backup check
+
+                    const total = orderList.reduce((acc, order) => acc + (order.total || 0), 0);
+
+                    setOrders(orderList);
+                    setEarnings(total);
+                }
+            } catch (err) {
+                console.error("Gagal memuat data:", err);
+                setError("Gagal memuat data.");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchFoods();
-    }, []);
+        fetchData();
+    }, [role, userId]);
 
-
-    const handleAddToCart = (foodId) => {
-        console.log(`Added food with ID ${foodId} to cart`);
-        // TODO: Implementasi tambah ke keranjang
-    };
-
-    if (loading) {
-        return <Loader message="Memuat makanan..." />;
-    }
-
-    if (error) {
-        return <div>Error: {error}</div>;
-    }
+    if (loading) return <Loader message="Memuat data..." />;
+    if (error) return <div>Error: {error}</div>;
 
     return (
         <div className="bg-gray-50 min-h-screen pb-16">
-            <div
-                className="relative h-64 sm:h-80 bg-cover bg-center"
-                style={{ backgroundImage: `url('/Cookies.png')` }}
-            >
-                <div className="absolute inset-0 bg-black/40 z-0" />
+            {role === "pelanggan" && (
+                <>
+                    <div
+                        className="relative h-64 sm:h-80 bg-cover bg-center"
+                        style={{ backgroundImage: `url('/Cookies.png')` }}
+                    >
+                        <div className="absolute inset-0 bg-black/40 z-0" />
+                        <div className="relative z-10">
+                            <Header
+                                greeting="Halo!"
+                                subtitle={`Selamat datang, Mibi Lovers!`}
+                            />
+                        </div>
+                    </div>
+                    <SearchBar placeholder="Mibi mau makan apa hari ini?" />
+                    <CategoryFilter />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 mt-4">
+                        {foods.map(food => (
+                            <FoodCard
+                                key={food.id}
+                                id={food.id}
+                                image={food.image}
+                                title={food.name}
+                                desc={food.description}
+                                price={food.price}
+                                rating={food.rating}
+                                isLoved={food.isLoved}
+                                onAddToCart={() => console.log(`Added ${food.id} to cart`)}
+                                review={food.review}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
 
-                <div className="relative z-10">
-                    <Header greeting="Hidupmu damai" subtitle="dengan satu suapan." />
-                </div>
-            </div>
+            {role === "pemilik" && (
+                <>
+                    <div
+                        className="relative h-64 sm:h-80 bg-no-repeat bg-cover bg-center rounded-b-[40px] overflow-hidden"
+                        style={{ backgroundImage: `url('/Mask group.png')` }}
+                    >
+                        <div className="absolute inset-0 bg-black/40 z-0" />
+                        <div className="relative z-10">
+                            <Header greeting="Halo!" subtitle="Selamat datang, Admin!" />
+                        </div>
+                    </div>
+                    <div className="px-4 mt-4 space-y-6">
+                        <EarningsCard total={earnings} />
+                        <IncomingOrderCard orders={orders} />
+                    </div>
+                </>
+            )}
 
-            {/* Search and Filter */}
-            <SearchBar placeholder="Mibi mau makan apa hari ini?" />
-            <CategoryFilter />
-
-            {/* Food Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 mt-4">
-                {foods.map(food => (
-                    <FoodCard
-                        key={food.id}
-                        id={food.id}
-                        image={food.image}
-                        title={food.name}
-                        desc={food.description}
-                        price={food.price}
-                        rating={food.rating}
-                        isLoved={food.isLoved} // <--- ini penting
-                        onAddToCart={() => handleAddToCart(food.id)}
-                        review={food.review}
-                    />
-                ))}
-            </div>
-
-            {/* Bottom Navigation */}
             <BottomNav active="Home" />
         </div>
     );

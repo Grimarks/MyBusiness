@@ -76,7 +76,7 @@ const LoginPage = () => {
 
                 <div className="text-center text-sm mt-12">
                     Belum punya akun?{" "}
-                    <Link to="/pilihan">
+                    <Link to="/select-account">
                         <span className="font-bold text-black cursor-pointer hover:underline">Daftar di sini</span>
                     </Link>
                 </div>
