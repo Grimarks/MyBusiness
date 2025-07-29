@@ -72,9 +72,6 @@ export default function IncomingOrderCard() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-orange-600 font-semibold">
-                                Rp {(order.amount ?? 0).toLocaleString("id-ID")}
-                            </p>
                             <p className="text-gray-600 text-xl leading-none">➜</p>
                         </div>
                     </div>

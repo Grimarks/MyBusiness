@@ -9,7 +9,9 @@ import {
     doc,
     getDocs,
     query,
-    where
+    where,
+    updateDoc,
+    serverTimestamp
 } from "firebase/firestore";
 
 // Fungsi untuk menambahkan favorit ke Firestore
@@ -39,6 +41,33 @@ const removeFromFavorites = async (foodId) => {
     snapshot.forEach(async (docFav) => {
         await deleteDoc(doc(db, "favorites", docFav.id));
     });
+};
+
+// Fungsi untuk menambahkan makanan ke keranjang
+const addToCart = async ({ id, title, image, price }) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const cartRef = collection(db, "carts");
+    const q = query(cartRef, where("userId", "==", userId), where("foodId", "==", id));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+        const cartDoc = snapshot.docs[0];
+        await updateDoc(cartDoc.ref, {
+            quantity: cartDoc.data().quantity + 1,
+        });
+    } else {
+        await addDoc(cartRef, {
+            userId,
+            foodId: id,
+            name: title,
+            image,
+            price,
+            quantity: 1,
+            createdAt: serverTimestamp()
+        });
+    }
 };
 
 export default function FoodCard({
@@ -73,7 +102,7 @@ export default function FoodCard({
 
     return (
         <div className="relative bg-white rounded-xl shadow-md p-3 sm:p-4 hover:shadow-lg transition-shadow duration-200">
-            {/* Love Icon as Image */}
+            {/* Love Icon */}
             <button
                 onClick={toggleLove}
                 className="absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow-sm focus:outline-none"
@@ -85,7 +114,7 @@ export default function FoodCard({
                 />
             </button>
 
-            {/* Food Image */}
+            {/* Image */}
             <img
                 src={image}
                 alt={title}
@@ -100,28 +129,28 @@ export default function FoodCard({
                 {desc}
             </p>
 
-            {/* Price + Add to Cart */}
+            {/* Rating, Price, Button */}
             <div className="flex flex-col gap-1 mt-1 sm:mt-2">
-                {/* Rating */}
                 <div className="flex items-center text-orange-500 text-xs sm:text-sm gap-1">
                     <StarIcon className="w-4 h-4" />
                     {rating} ({review})
                 </div>
 
-                {/* Price and Add to Cart */}
                 <div className="flex justify-between items-center">
-        <span className="text-sm sm:text-base font-medium text-gray-700">
-            Rp {price}
-        </span>
+                    <span className="text-sm sm:text-base font-medium text-gray-700">
+                        Rp {price}
+                    </span>
                     <button
-                        onClick={onAddToCart}
+                        onClick={() => {
+                            addToCart({ id, title, image, price });
+                            onAddToCart && onAddToCart();
+                        }}
                         className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-orange-400"
                     >
                         <PlusCircleIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                     </button>
                 </div>
             </div>
-
         </div>
     );
 }

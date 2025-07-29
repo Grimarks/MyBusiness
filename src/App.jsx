@@ -13,6 +13,7 @@ import CartPage from './pages/CartPage';
 import AccountPage from './pages/AccountPage';
 import ChatPage from './pages/ChatPage';
 import PendapatanPage from "./pages/PendapatanPage.jsx";
+import ThankYouPage from "./pages/ThankYouPage.jsx";
 
 function App() {
     return (
@@ -32,6 +33,7 @@ function App() {
                 <Route path="/chatPage" element={<ChatPage />} />
                 <Route path="/" element={<SplashMibi />} />
                 <Route path="/pendapatan" element={<PendapatanPage></PendapatanPage>} />
+                <Route path="/thankyou" element={<ThankYouPage />} />
             </Routes>
         </Router>
 

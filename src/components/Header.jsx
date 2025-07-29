@@ -25,7 +25,10 @@ export default function Header({ greeting, subtitle }) {
                             className={iconImageStyle}
                         />
                     </button>
-                    <button className={iconButtonStyle}>
+                    <button
+                        onClick={() => navigate("/cart")}
+                        className={iconButtonStyle}
+                    >
                         <img
                             src="/assets/Keranjang.svg"
                             alt="Cart Icon"
@@ -61,13 +64,17 @@ export default function Header({ greeting, subtitle }) {
                             className={iconImageStyle}
                         />
                     </button>
-                    <button className={iconButtonStyle}>
+                    <button
+                        onClick={() => navigate("/cart")}
+                        className={iconButtonStyle}
+                    >
                         <img
                             src="/assets/Keranjang.svg"
                             alt="Cart Icon"
                             className={iconImageStyle}
                         />
                     </button>
+
                 </div>
             </div>
         </div>
