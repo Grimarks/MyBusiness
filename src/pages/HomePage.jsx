@@ -84,17 +84,40 @@ export default function HomePage() {
                 }
 
                 if (role === "pemilik") {
-                    const ordersRef = collection(db, "orders");
-                    const ordersSnap = await getDocs(ordersRef);
-                    const orderList = ordersSnap.docs
-                        .map(doc => ({ id: doc.id, ...doc.data() }))
-                        .filter(order => order.ownerId === userId || order.ownerName === auth.currentUser?.displayName); // backup check
+                    // Ambil kedaiName dari user login
+                    const userRef = doc(db, "users", userId);
+                    const userSnap = await getDoc(userRef);
 
-                    const total = orderList.reduce((acc, order) => acc + (order.total || 0), 0);
+                    if (userSnap.exists()) {
+                        const { kedaiName } = userSnap.data();
 
-                    setOrders(orderList);
-                    setEarnings(total);
+                        const ordersRef = collection(db, "order");
+                        const ordersQuery = query(
+                            ordersRef,
+                            where("ownerName", "==", kedaiName) // hanya order milik toko ini
+                        );
+
+                        const ordersSnap = await getDocs(ordersQuery);
+
+                        const orderList = ordersSnap.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data(),
+                        }));
+
+                        // Hanya hitung order selesai
+                        const finishedOrders = orderList.filter(order => order.status === true);
+
+                        const total = finishedOrders.reduce(
+                            (acc, order) => acc + (order.amount || 0),
+                            0
+                        );
+
+                        setOrders(orderList);   // semua pesanan toko ini
+                        setEarnings(total);     // total pendapatan (selesai saja)
+                    }
                 }
+
+
             } catch (err) {
                 console.error("Gagal memuat data:", err);
                 setError("Gagal memuat data.");

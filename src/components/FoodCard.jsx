@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
+import React, { useState, useEffect } from "react";
+import { PlusCircleIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
 import { StarIcon } from "@heroicons/react/24/solid";
+import { useNavigate } from "react-router-dom";
 import { db, auth } from "../firebaseConfig.js";
 import {
     collection,
@@ -11,10 +12,25 @@ import {
     query,
     where,
     updateDoc,
-    serverTimestamp
+    serverTimestamp,
+    getDoc,
 } from "firebase/firestore";
 
-// Fungsi untuk menambahkan favorit ke Firestore
+// === Helpers ===
+const getDriveThumbnail = (url, size = "w200-h200") => {
+    if (!url) return "/default-food.png";
+
+    const ucMatch = url.match(/id=([^&]+)/);
+    if (ucMatch)
+        return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
+
+    const dMatch = url.match(/\/d\/([^/]+)\//);
+    if (dMatch)
+        return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
+
+    return url;
+};
+
 const addToFavorites = async (foodId) => {
     const userId = auth.currentUser?.uid || "guest";
     const favoritesRef = collection(db, "favorites");
@@ -22,11 +38,10 @@ const addToFavorites = async (foodId) => {
     await addDoc(favoritesRef, {
         foodId,
         userId,
-        createdAt: new Date()
+        createdAt: new Date(),
     });
 };
 
-// Fungsi untuk menghapus favorit dari Firestore
 const removeFromFavorites = async (foodId) => {
     const userId = auth.currentUser?.uid || "guest";
     const favoritesRef = collection(db, "favorites");
@@ -43,13 +58,16 @@ const removeFromFavorites = async (foodId) => {
     });
 };
 
-// Fungsi untuk menambahkan makanan ke keranjang
 const addToCart = async ({ id, title, image, price }) => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
 
     const cartRef = collection(db, "carts");
-    const q = query(cartRef, where("userId", "==", userId), where("foodId", "==", id));
+    const q = query(
+        cartRef,
+        where("userId", "==", userId),
+        where("foodId", "==", id)
+    );
     const snapshot = await getDocs(q);
 
     if (!snapshot.empty) {
@@ -65,11 +83,12 @@ const addToCart = async ({ id, title, image, price }) => {
             image,
             price,
             quantity: 1,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
         });
     }
 };
 
+// === Component ===
 export default function FoodCard({
                                      id,
                                      image,
@@ -78,10 +97,14 @@ export default function FoodCard({
                                      price,
                                      rating,
                                      review,
+                                     role = "pelanggan", // bisa "pelanggan" atau "pemilik"
                                      isLoved: initialIsLoved = false,
                                      onAddToCart,
                                  }) {
     const [isLoved, setIsLoved] = useState(initialIsLoved);
+    const [roleUser, setRoleUser] = useState("pelanggan");
+    const navigate = useNavigate();
+    const imgSrc = getDriveThumbnail(image);
 
     const toggleLove = async () => {
         const newLoveState = !isLoved;
@@ -90,15 +113,26 @@ export default function FoodCard({
         try {
             if (newLoveState) {
                 await addToFavorites(id);
-                console.log("Ditambahkan ke favorit:", id);
             } else {
                 await removeFromFavorites(id);
-                console.log("Dihapus dari favorit:", id);
             }
         } catch (err) {
             console.error("Gagal memperbarui favorit:", err);
         }
     };
+
+    useEffect(() => {
+        const fetchRole = async () => {
+            const userId = auth.currentUser?.uid;
+            if (!userId) return;
+            const userRef = doc(db, "users", userId);
+            const snap = await getDoc(userRef);
+            if (snap.exists()) {
+                setRoleUser(snap.data().role);
+            }
+        };
+        fetchRole();
+    }, []);
 
     return (
         <div className="relative bg-white rounded-xl shadow-md p-3 sm:p-4 hover:shadow-lg transition-shadow duration-200">
@@ -115,11 +149,9 @@ export default function FoodCard({
             </button>
 
             {/* Image */}
-            <img
-                src={image}
-                alt={title}
-                className="rounded-xl h-32 w-full object-cover mb-2 sm:mb-3"
-            />
+            <div className="rounded-xl h-32 w-full overflow-hidden mb-2 sm:mb-3">
+                <img src={imgSrc} alt={title} className="w-full h-full object-cover" />
+            </div>
 
             {/* Title & Description */}
             <h3 className="font-semibold text-sm sm:text-base text-gray-800 truncate">
@@ -137,18 +169,29 @@ export default function FoodCard({
                 </div>
 
                 <div className="flex justify-between items-center">
-                    <span className="text-sm sm:text-base font-medium text-gray-700">
-                        Rp {price}
-                    </span>
-                    <button
-                        onClick={() => {
-                            addToCart({ id, title, image, price });
-                            onAddToCart && onAddToCart();
-                        }}
-                        className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    >
-                        <PlusCircleIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-                    </button>
+          <span className="text-sm sm:text-base font-medium text-gray-700">
+            Rp {price}
+          </span>
+
+                    {/* Tombol berbeda sesuai role */}
+                    {roleUser === "pelanggan" ? (
+                        <button
+                            onClick={() => {
+                                addToCart({ id, title, image: imgSrc, price });
+                                onAddToCart && onAddToCart();
+                            }}
+                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        >
+                            <PlusCircleIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => navigate(`/edit-food/${id}`)}
+                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        >
+                            <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

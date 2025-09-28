@@ -14,7 +14,9 @@ import AccountPage from './pages/AccountPage';
 import ChatPage from './pages/ChatPage';
 import PendapatanPage from "./pages/PendapatanPage.jsx";
 import ThankYouPage from "./pages/ThankYouPage.jsx";
-
+import AddFoodPage from "./pages/AddFoodPage.jsx";
+import EditStorePage from "./pages/EditStorePage.jsx";
+import EditFoodPage from "./pages/EditFoodPage.jsx";
 function App() {
     return (
         <Router>
@@ -34,6 +36,9 @@ function App() {
                 <Route path="/" element={<SplashMibi />} />
                 <Route path="/pendapatan" element={<PendapatanPage></PendapatanPage>} />
                 <Route path="/thankyou" element={<ThankYouPage />} />
+                <Route path="/add-food" element={<AddFoodPage/>} />
+                <Route path="/edit-food" element={<EditFoodPage/>} />
+                <Route path="/edit-store" element={<EditStorePage/>} />
             </Routes>
         </Router>
 

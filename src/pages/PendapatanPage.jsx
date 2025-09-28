@@ -1,34 +1,61 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
-import { collection, getDocs } from "firebase/firestore";
-import { db} from "../firebaseConfig.js";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db, auth } from "../firebaseConfig.js";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function PendapatanPage() {
     const navigate = useNavigate();
     const [earnings, setEarnings] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const querySnapshot = await getDocs(collection(db, "earnings"));
-                const data = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data(),
-                }));
-                setEarnings(data);
-            } catch (error) {
-                console.error("Gagal mengambil data earnings:", error);
-            }
-        };
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    // Cari data user di collection users
+                    const usersSnap = await getDocs(
+                        query(collection(db, "users"), where("uid", "==", user.uid))
+                    );
+                    if (!usersSnap.empty) {
+                        const userData = usersSnap.docs[0].data();
+                        const ownerName = userData.kedaiName;
 
-        fetchData();
+                        // Ambil pesanan selesai milik kedai ini
+                        const ordersRef = collection(db, "order");
+                        const ordersQuery = query(
+                            ordersRef,
+                            where("ownerName", "==", ownerName),
+                            where("status", "==", true)
+                        );
+                        const ordersSnap = await getDocs(ordersQuery);
+
+                        const data = ordersSnap.docs.map((doc) => ({
+                            id: doc.id,
+                            ...doc.data(),
+                        }));
+                        setEarnings(data);
+                    }
+                } catch (error) {
+                    console.error("Gagal mengambil data order:", error);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        });
+
+        return () => unsubscribe();
     }, []);
 
-    const totalPendapatan = earnings.reduce((sum, item) => sum + item.amount, 0);
+    const totalPendapatan = earnings.reduce((sum, item) => sum + (item.amount || 0), 0);
 
     const now = new Date();
     const monthYear = now.toLocaleString("id-ID", { month: "long", year: "numeric" });
+
+    if (loading) {
+        return <p className="text-center mt-6">Memuat pendapatan...</p>;
+    }
 
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400">
@@ -80,7 +107,6 @@ export default function PendapatanPage() {
                         </div>
                     ))}
                 </div>
-
             </div>
         </div>
     );

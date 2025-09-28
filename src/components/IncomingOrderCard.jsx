@@ -24,15 +24,12 @@ export default function IncomingOrderCard() {
                         const userData = userSnap.docs[0].data();
 
                         if (userData.role === "pemilik") {
-                            const ownerName = userData.nama;
-
-                            // Ambil pesanan dari collection "order" sesuai ownerName
-                            const orderRef = collection(db, "order");
-                            const orderQuery = query(orderRef, where("ownerName", "==", ownerName));
+                            const orderRef = collection(db, "order"); // ✅ gunakan "orders"
+                            const orderQuery = query(orderRef, where("ownerName", "==", userData.kedaiName));
                             const orderSnap = await getDocs(orderQuery);
-
-                            const orderList = orderSnap.docs.map(doc => doc.data());
+                            const orderList = orderSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             setOrders(orderList);
+
                         }
                     }
                 } catch (error) {

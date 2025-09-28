@@ -26,6 +26,7 @@ const RegisterPelangganPage = () => {
                     email,
                     role: "pelanggan",
                     uid: user.uid,
+                    password
                 });
                 alert("Registrasi berhasil!");
                 navigate("/loginpage");

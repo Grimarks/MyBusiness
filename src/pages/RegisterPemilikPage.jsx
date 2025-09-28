@@ -26,6 +26,7 @@ const RegisterPemilikPage = () => {
                     email,
                     role: "pemilik",
                     uid: user.uid,
+                    password
                 });
                 alert("Registrasi berhasil!");
                 navigate("/loginpage");
