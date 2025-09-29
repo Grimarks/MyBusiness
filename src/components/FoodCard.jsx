@@ -186,7 +186,7 @@ export default function FoodCard({
                         </button>
                     ) : (
                         <button
-                            onClick={() => navigate(`/edit-food/${id}`)}
+                            onClick={() => navigate("/edit-food", { state: { foodId: id } })}
                             className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-orange-400"
                         >
                             <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />

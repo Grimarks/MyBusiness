@@ -12,7 +12,7 @@ export default function BottomNav({ active }) {
     const navigate = useNavigate();
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 z-50">
             {tabs.map((tab) => {
                 const isActive = active === tab.label;
                 const iconPath = `../assets/${tab.icon}${isActive ? "" : "-gray"}.svg`;

@@ -81,9 +81,10 @@ export default function EditStorePage() {
     };
 
     return (
-        <div className="p-4">
+        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 ">
             <Header title="Profil Toko" />
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form   className="p-4 max-w-md mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4"
+                    onSubmit={handleSubmit}>
                 <input
                     type="text"
                     placeholder="Nama Toko"

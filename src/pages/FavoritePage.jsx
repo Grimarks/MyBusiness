@@ -75,8 +75,13 @@ const FavoritePage = () => {
             setLoading(true);
             try {
                 if (role === "pelanggan") {
+                    const userId = auth.currentUser?.uid;
+
+                    // ✅ filter favorite hanya milik user login
                     const favoritesCollection = collection(db, "favorites");
-                    const favoriteSnapshot = await getDocs(favoritesCollection);
+                    const q = query(favoritesCollection, where("userId", "==", userId));
+                    const favoriteSnapshot = await getDocs(q);
+
                     const favoriteList = favoriteSnapshot.docs.map((doc) => ({
                         id: doc.id,
                         ...doc.data(),

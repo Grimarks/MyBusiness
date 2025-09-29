@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import Header from "../components/Header.jsx";
 
 export default function EditFoodPage() {
-    const { id } = useParams(); // id food dari URL
+    const location = useLocation();
     const navigate = useNavigate();
+    const foodId = location.state?.foodId;
 
     const [form, setForm] = useState({
         name: "",
@@ -18,15 +19,19 @@ export default function EditFoodPage() {
     const [imageFile, setImageFile] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    // 🔑 Ganti dengan URL Web App Google Apps Script
+    // ✅ Jangan lupa samakan dengan AddFoodPage
     const WEB_APP_URL =
         "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
 
-    // Fetch data food by ID
     useEffect(() => {
         const fetchFood = async () => {
+            if (!foodId) {
+                alert("ID makanan tidak ditemukan");
+                navigate(-1);
+                return;
+            }
             try {
-                const foodRef = doc(db, "foods", id);
+                const foodRef = doc(db, "foods", foodId);
                 const foodSnap = await getDoc(foodRef);
 
                 if (foodSnap.exists()) {
@@ -41,9 +46,8 @@ export default function EditFoodPage() {
             }
         };
         fetchFood();
-    }, [id, navigate]);
+    }, [foodId, navigate]);
 
-    // Upload ke Google Drive
     const uploadToDrive = async () => {
         const base64 = await toBase64(imageFile);
         const res = await fetch(WEB_APP_URL, {
@@ -70,6 +74,7 @@ export default function EditFoodPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!foodId) return;
         setLoading(true);
 
         try {
@@ -78,12 +83,11 @@ export default function EditFoodPage() {
                 imageUrl = await uploadToDrive();
             }
 
-            const foodRef = doc(db, "foods", id);
+            const foodRef = doc(db, "foods", foodId);
             await updateDoc(foodRef, {
-                name: form.name,
-                description: form.description,
-                price: parseInt(form.price),
-                stock: parseInt(form.stock),
+                ...form,
+                price: parseInt(form.price) || 0,
+                stock: parseInt(form.stock) || 0,
                 image: imageUrl,
             });
 
@@ -98,28 +102,29 @@ export default function EditFoodPage() {
     };
 
     return (
-        <div className="p-4">
+        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 ">
             <Header title="Edit Menu" />
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form   className="p-4 max-w-md mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4"
+                    onSubmit={handleSubmit}>
                 <input
                     type="text"
                     placeholder="Nama Menu"
                     className="w-full p-2 border rounded"
-                    value={form.name}
+                    value={form.name || ""}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
                 />
                 <textarea
                     placeholder="Deskripsi Menu"
                     className="w-full p-2 border rounded"
-                    value={form.description}
+                    value={form.description || ""}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
                 <input
                     type="number"
                     placeholder="Harga"
                     className="w-full p-2 border rounded"
-                    value={form.price}
+                    value={form.price || ""}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     required
                 />
@@ -127,7 +132,7 @@ export default function EditFoodPage() {
                     type="number"
                     placeholder="Stock"
                     className="w-full p-2 border rounded"
-                    value={form.stock}
+                    value={form.stock || ""}
                     onChange={(e) => setForm({ ...form, stock: e.target.value })}
                     required
                 />
