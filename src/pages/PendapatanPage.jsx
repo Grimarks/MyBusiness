@@ -14,24 +14,32 @@ export default function PendapatanPage() {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    // Cari data user di collection users
                     const usersSnap = await getDocs(
                         query(collection(db, "users"), where("uid", "==", user.uid))
                     );
                     if (!usersSnap.empty) {
                         const userData = usersSnap.docs[0].data();
-                        const ownerName = userData.kedaiName;
-
-                        // Ambil pesanan selesai milik kedai ini
                         const ordersRef = collection(db, "order");
-                        const ordersQuery = query(
+
+                        // 🔑 Ambil pesanan selesai berdasarkan ownerId
+                        const qById = query(
                             ordersRef,
-                            where("ownerName", "==", ownerName),
+                            where("ownerId", "==", user.uid),
                             where("status", "==", true)
                         );
-                        const ordersSnap = await getDocs(ordersQuery);
+                        let snap = await getDocs(qById);
 
-                        const data = ordersSnap.docs.map((doc) => ({
+                        // fallback ke ownerName
+                        if (snap.empty) {
+                            const qByName = query(
+                                ordersRef,
+                                where("ownerName", "==", userData.kedaiName),
+                                where("status", "==", true)
+                            );
+                            snap = await getDocs(qByName);
+                        }
+
+                        const data = snap.docs.map((doc) => ({
                             id: doc.id,
                             ...doc.data(),
                         }));
@@ -48,7 +56,10 @@ export default function PendapatanPage() {
         return () => unsubscribe();
     }, []);
 
-    const totalPendapatan = earnings.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const totalPendapatan = earnings.reduce(
+        (sum, item) => sum + (item.amount || 0),
+        0
+    );
 
     const now = new Date();
     const monthYear = now.toLocaleString("id-ID", { month: "long", year: "numeric" });
@@ -89,15 +100,21 @@ export default function PendapatanPage() {
 
                 {/* List pelanggan */}
                 <div className="space-y-4">
-                    {earnings.map((item, index) => (
+                    {earnings.map((item) => (
                         <div
-                            key={index}
+                            key={item.id}
                             className="flex items-center justify-between p-4 rounded-xl border border-gray-100 shadow-sm bg-gray-200"
                         >
                             {/* Kolom kiri */}
                             <div>
-                                <p className="text-gray-800 font-medium">{item.customerName}</p>
-                                <p className="text-sm text-gray-500">{item.orderDetails}</p>
+                                <p className="text-gray-800 font-medium">
+                                    {item.customerName}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                    {item.items
+                                        ? item.items.map((it) => `${it.qty}x ${it.name}`).join(", ")
+                                        : item.orderDetails || "-"}
+                                </p>
                             </div>
 
                             {/* Kolom kanan */}

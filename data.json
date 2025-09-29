@@ -1,0 +1,10 @@
+{
+  "customerName": "Cust 002",
+  "ownerId": "FV7xvxggDAQHETkn8CKugAZP0Rn1",
+  "amount": 31000,
+  "status": false,
+  "items": [
+    { "name": "Pangsit chilli oil", "qty": 2, "image": "url", "note": "" },
+    { "name": "Nasi Goreng", "qty": 1, "image": "url", "note": "Pedas" }
+  ]
+}

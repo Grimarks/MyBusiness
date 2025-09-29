@@ -12,29 +12,37 @@ export default function EarningsCard() {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    // Cari kedai user
                     const usersSnap = await getDocs(
                         query(collection(db, "users"), where("uid", "==", user.uid))
                     );
                     if (!usersSnap.empty) {
                         const userData = usersSnap.docs[0].data();
-                        const ownerName = userData.kedaiName;
+                        const ordersRef = collection(db, "order");
 
-                        // Ambil order selesai sesuai ownerName
-                        const ordersSnap = await getDocs(
-                            query(
-                                collection(db, "order"),
-                                where("ownerName", "==", ownerName),
+                        // 🔑 Utama → pakai ownerId
+                        const qById = query(
+                            ordersRef,
+                            where("ownerId", "==", user.uid),
+                            where("status", "==", true)
+                        );
+                        let snap = await getDocs(qById);
+
+                        // fallback → pakai ownerName
+                        if (snap.empty) {
+                            const qByName = query(
+                                ordersRef,
+                                where("ownerName", "==", userData.kedaiName),
                                 where("status", "==", true)
-                            )
+                            );
+                            snap = await getDocs(qByName);
+                        }
+
+                        const totalAmount = snap.docs.reduce(
+                            (sum, doc) => sum + (doc.data().amount || 0),
+                            0
                         );
 
-                        let sum = 0;
-                        ordersSnap.forEach((doc) => {
-                            const data = doc.data();
-                            sum += data.amount || 0;
-                        });
-                        setTotal(sum);
+                        setTotal(totalAmount);
                     }
                 } catch (error) {
                     console.error("Gagal mengambil data order:", error);
