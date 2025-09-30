@@ -27,6 +27,8 @@ export default function HomePage() {
     const [orders, setOrders] = useState([]);
     const [earnings, setEarnings] = useState(0);
     const [error, setError] = useState(null);
+    const [filterFoodCategory, setFilterFoodCategory] = useState("All");
+    const [filterLocation, setFilterLocation] = useState("All");
 
     // Step 1: Pastikan user sudah login
     useEffect(() => {
@@ -132,6 +134,19 @@ export default function HomePage() {
     if (loading) return <Loader message="Memuat data..." />;
     if (error) return <div>Error: {error}</div>;
 
+    const filteredFoods = foods.filter((food) => {
+        const matchCategory =
+            filterFoodCategory === "All" || food.category === filterFoodCategory;
+
+        const matchLocation =
+            filterLocation === "All" || food.location === filterLocation;
+
+        return matchCategory && matchLocation;
+    });
+
+    if (loading) return <Loader message="Memuat data..." />;
+    if (error) return <div>Error: {error}</div>;
+
     return (
         <div className="bg-gray-50 min-h-screen pb-16">
             {role === "pelanggan" && (
@@ -149,9 +164,17 @@ export default function HomePage() {
                         </div>
                     </div>
                     <SearchBar placeholder="Mibi mau makan apa hari ini?" />
-                    <CategoryFilter />
+
+                    {/* ✅ Filter category */}
+                    <CategoryFilter
+                        filterLocation={filterLocation}
+                        setFilterLocation={setFilterLocation}
+                        filterFoodCategory={filterFoodCategory}
+                        setFilterFoodCategory={setFilterFoodCategory}
+                    />
+
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
-                        {foods.map(food => (
+                        {filteredFoods.map((food) => (
                             <FoodCard
                                 key={food.id}
                                 id={food.id}
@@ -161,10 +184,18 @@ export default function HomePage() {
                                 price={food.price}
                                 rating={food.rating}
                                 isLoved={food.isLoved}
-                                onAddToCart={() => console.log(`Added ${food.id} to cart`)}
+                                onAddToCart={() =>
+                                    console.log(`Added ${food.id} to cart`)
+                                }
                                 review={food.review}
                             />
                         ))}
+
+                        {filteredFoods.length === 0 && (
+                            <p className="col-span-full text-center text-gray-500">
+                                Tidak ada makanan ditemukan
+                            </p>
+                        )}
                     </div>
                 </>
             )}

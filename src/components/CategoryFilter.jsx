@@ -1,5 +1,5 @@
-import React from 'react';
-import { useLocation } from 'react-router-dom';
+import React from "react";
+import { useLocation } from "react-router-dom";
 
 const CategoryFilter = ({
                             filterLocation,
@@ -21,7 +21,8 @@ const CategoryFilter = ({
         "Kopi",
     ];
 
-    const isLocationFilterPage = currentPath === "/pilihan" || currentPath === "/favorite";
+    const isLocationFilterPage =
+        currentPath === "/pilihan" || currentPath === "/favorite";
 
     if (isLocationFilterPage) {
         return (

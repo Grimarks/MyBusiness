@@ -4,6 +4,21 @@ import Header from "../components/Header.jsx";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 
+// === Helpers ===
+const getDriveThumbnail = (url, size = "w200-h200") => {
+    if (!url) return "/default-food.png";
+
+    const ucMatch = url.match(/id=([^&]+)/);
+    if (ucMatch)
+        return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
+
+    const dMatch = url.match(/\/d\/([^/]+)\//);
+    if (dMatch)
+        return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
+
+    return url;
+};
+
 export default function OrderDetailPage() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -44,7 +59,11 @@ export default function OrderDetailPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
-            <Header title={order.customerName ? `Cust ${order.customerName}` : "Detail Pesanan"} />
+            <Header
+                title={
+                    order.customerName ? `Cust ${order.customerName}` : "Detail Pesanan"
+                }
+            />
             <div className="p-4 max-w-md mx-auto bg-white rounded-2xl shadow-md mt-4 space-y-4">
                 <h2 className="text-xl font-bold">Pesanan:</h2>
 
@@ -57,7 +76,7 @@ export default function OrderDetailPage() {
                         >
                             <div className="flex items-center space-x-3">
                                 <img
-                                    src={item.image}
+                                    src={getDriveThumbnail(item.image, "w300-h300")}
                                     alt={item.name}
                                     className="w-16 h-16 object-cover rounded-lg"
                                 />
