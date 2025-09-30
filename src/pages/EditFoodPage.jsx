@@ -4,6 +4,21 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import Header from "../components/Header.jsx";
 
+// === Helpers ===
+const getDriveThumbnail = (url, size = "w200-h200") => {
+    if (!url) return "/default-food.png";
+
+    const ucMatch = url.match(/id=([^&]+)/);
+    if (ucMatch)
+        return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
+
+    const dMatch = url.match(/\/d\/([^/]+)\//);
+    if (dMatch)
+        return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
+
+    return url;
+};
+
 export default function EditFoodPage() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -19,7 +34,7 @@ export default function EditFoodPage() {
     const [imageFile, setImageFile] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    // ✅ Jangan lupa samakan dengan AddFoodPage
+    // ✅ Samakan dengan AddFoodPage
     const WEB_APP_URL =
         "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
 
@@ -102,10 +117,12 @@ export default function EditFoodPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 ">
+        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400">
             <Header title="Edit Menu" />
-            <form   className="p-4 max-w-md mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4"
-                    onSubmit={handleSubmit}>
+            <form
+                className="p-4 max-w-md mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4"
+                onSubmit={handleSubmit}
+            >
                 <input
                     type="text"
                     placeholder="Nama Menu"
@@ -118,7 +135,9 @@ export default function EditFoodPage() {
                     placeholder="Deskripsi Menu"
                     className="w-full p-2 border rounded"
                     value={form.description || ""}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    onChange={(e) =>
+                        setForm({ ...form, description: e.target.value })
+                    }
                 />
                 <input
                     type="number"
@@ -143,7 +162,7 @@ export default function EditFoodPage() {
                 />
                 {form.image && (
                     <img
-                        src={form.image}
+                        src={getDriveThumbnail(form.image, "w300-h300")}
                         alt="Preview"
                         className="w-32 h-32 object-cover rounded mt-2"
                     />

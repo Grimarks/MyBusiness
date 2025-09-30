@@ -1,48 +1,48 @@
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "./src/firebaseConfig.js";
 
-const orders = [
+const chats = [
     {
-        customerName: "Cust 003",
-        ownerId: "FV7xvxggDAQHETkn8CKugAZP0Rn1",
-        amount: 45000,
-        status: false,
-        items: [
-            { name: "Mie Ayam Bakso", qty: 1, image: "url", note: "Tanpa sawi" },
-            { name: "Es Teh Manis", qty: 2, image: "url", note: "" },
-        ],
+        name: "Bakso Layanan",
+        message: "Pesanan kamu sudah siap ya!",
+        time: new Date("2025-09-30T08:45:00+07:00"),
     },
     {
-        customerName: "Cust 004",
-        ownerId: "FV7xvxggDAQHETkn8CKugAZP0Rn1",
-        amount: 27500,
-        status: false,
-        items: [
-            { name: "Ayam Geprek", qty: 1, image: "url", note: "Level 3" },
-            { name: "Nasi Putih", qty: 1, image: "url", note: "" },
-        ],
+        name: "Ayam Geprek Lunjuk",
+        message: "Makanannya sedang diantar ke alamatmu.",
+        time: new Date("2025-09-29T16:20:00+07:00"), // kemarin
     },
     {
-        customerName: "Cust 005",
-        ownerId: "FV7xvxggDAQHETkn8CKugAZP0Rn1",
-        amount: 52000,
-        status: false,
-        items: [
-            { name: "Sate Ayam", qty: 10, image: "url", note: "Pakai bumbu kacang" },
-            { name: "Es Jeruk", qty: 1, image: "url", note: "Dingin banget" },
-        ],
+        name: "Cimol Bukit",
+        message: "Stok cimol keju masih ada, mau pesan lagi?",
+        time: new Date("2025-09-28T14:00:00+07:00"), // Senin
+    },
+    {
+        name: "Batagor Fisip",
+        message: "Terima kasih sudah order ya!",
+        time: new Date("2025-09-26T19:30:00+07:00"), // Jumat
+    },
+    {
+        name: "Basreng Bukit",
+        message: "Diskon spesial untuk pelanggan setia 💥",
+        time: new Date("2025-09-25T09:15:00+07:00"),
+    },
+    {
+        name: "Nasi Padang Indralaya",
+        message: "Pesananmu akan segera diproses.",
+        time: new Date("2025-09-24T12:10:00+07:00"),
     },
 ];
 
-async function uploadOrders() {
+async function uploadChats() {
     try {
-        for (const order of orders) {
-            await addDoc(collection(db, "order"), order);
-            console.log(`✅ Order ${order.customerName} berhasil ditambahkan!`);
+        for (const chat of chats) {
+            await addDoc(collection(db, "dummyChats"), chat);
+            console.log(`✅ Chat ${chat.name} ditambahkan!`);
         }
     } catch (e) {
-        console.error("❌ Gagal upload order:", e);
+        console.error("❌ Gagal upload chat:", e);
     }
 }
 
-uploadOrders();
+uploadChats();

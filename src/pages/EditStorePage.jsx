@@ -13,7 +13,7 @@ export default function EditStorePage() {
     const [image, setImage] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    const WEB_APP_URL = "YOUR_WEB_APP_URL";
+    const WEB_APP_URL =      "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
 
     useEffect(() => {
         const fetchData = async () => {
