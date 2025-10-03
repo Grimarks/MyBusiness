@@ -7,6 +7,8 @@ import {
     updateDoc,
     deleteDoc,
     doc,
+    addDoc,
+    getDoc,
 } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
 import { useNavigate } from "react-router-dom";
@@ -109,6 +111,61 @@ export default function CartPage() {
 
         // Refresh data
         fetchCart();
+    };
+
+    const handleOrderNow = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        try {
+            // 1. Ambil nama customer dari users
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const customerName = userDoc.exists() ? userDoc.data().nama : "Anonim";
+
+            // 2. Kelompokkan items by ownerId
+            const groupedByOwner = {};
+            for (const item of items) {
+                // cari food detail (karena di carts gak ada ownerId)
+                const foodSnap = await getDoc(doc(db, "foods", item.foodId));
+                if (!foodSnap.exists()) continue;
+                const foodData = foodSnap.data();
+                const ownerId = foodData.uid;
+
+                if (!groupedByOwner[ownerId]) groupedByOwner[ownerId] = [];
+                groupedByOwner[ownerId].push({
+                    name: item.name,
+                    qty: item.quantity,
+                    image: item.image,
+                    note: item.note || "",
+                    price: item.price,
+                });
+            }
+
+            // 3. Buat order per toko
+            for (const [ownerId, ownerItems] of Object.entries(groupedByOwner)) {
+                const total = ownerItems.reduce((sum, it) => sum + it.price * it.qty, 0);
+
+                await addDoc(collection(db, "order"), {
+                    customerName,
+                    ownerId,
+                    amount: total,
+                    status: false,
+                    items: ownerItems,
+                    createdAt: new Date(),
+                });
+            }
+
+            // 4. Hapus cart setelah order
+            for (const item of items) {
+                await deleteDoc(doc(db, "carts", item.id));
+            }
+
+            alert("Pesanan berhasil dibuat!");
+            navigate("/thankyou");
+        } catch (err) {
+            console.error("Gagal membuat pesanan:", err);
+            alert("Gagal memproses pesanan.");
+        }
     };
 
     return (
@@ -233,7 +290,7 @@ export default function CartPage() {
                 {/* Tombol Pesan */}
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
                     <button
-                        onClick={() => navigate("/thankyou")}
+                        onClick={handleOrderNow}
                         className="w-full bg-yellow-400 text-black font-bold py-3.5 rounded-full text-3xl shadow-lg hover:bg-yellow-300 transition"
                     >
                         Pesan Sekarang

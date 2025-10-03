@@ -3,11 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, db } from "../firebaseConfig";
 import Loader from "../components/Loader";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 const RegisterPemilikPage = () => {
     const [nama, setNama] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -16,6 +19,12 @@ const RegisterPemilikPage = () => {
     const handleRegister = async (e) => {
         e.preventDefault();
         setError("");
+
+        if (password !== confirmPassword) {
+            setError("Password dan Konfirmasi Password tidak sama!");
+            return;
+        }
+
         setLoading(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -26,7 +35,6 @@ const RegisterPemilikPage = () => {
                     email,
                     role: "pemilik",
                     uid: user.uid,
-                    password
                 });
                 alert("Registrasi berhasil!");
                 navigate("/loginpage");
@@ -76,12 +84,32 @@ const RegisterPemilikPage = () => {
                         />
                     </div>
 
-                    <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl">
+                    {/* Password */}
+                    <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
                         <input
-                            type="password"
-                            placeholder="*********"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            className="bg-transparent w-full focus:outline-none text-gray-700"
+                            required
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 text-gray-500"
+                        >
+                            {showPassword ? <EyeSlashIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                        </button>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Konfirmasi Password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
                             className="bg-transparent w-full focus:outline-none text-gray-700"
                             required
                         />

@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import Loader from "../components/Loader";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -14,13 +16,19 @@ const LoginPage = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         setError("");
+
+        if (password.length !== 6) {
+            setError("Password HARUS 6 karakter!");
+            return;
+        }
+
         setLoading(true);
         try {
             await signInWithEmailAndPassword(auth, email, password);
             console.log("Login successful!");
             navigate("/home"); // Redirect to home on success
         } catch (err) {
-            setError(err.message);
+            setError("Email atau password salah!");
             console.error("Login failed:", err);
         } finally {
             setLoading(false);
@@ -42,6 +50,7 @@ const LoginPage = () => {
                 <form onSubmit={handleLogin} className="flex flex-col px-6 space-y-6">
                     <h2 className="text-3xl font-bold text-orange-600">Masuk</h2>
 
+                    {/* Email */}
                     <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl">
                         <input
                             type="email"
@@ -53,15 +62,23 @@ const LoginPage = () => {
                         />
                     </div>
 
-                    <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl">
+                    {/* Password + Toggle Eye */}
+                    <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
                         <input
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             placeholder="*********"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="bg-transparent w-full focus:outline-none text-gray-700"
                             required
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 text-gray-500"
+                        >
+                            {showPassword ? <EyeSlashIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                        </button>
                     </div>
 
                     {error && <p className="text-red-500 text-sm">{error}</p>}

@@ -91,12 +91,17 @@ export default function HomePage() {
                     const userSnap = await getDoc(userRef);
 
                     if (userSnap.exists()) {
-                        const { kedaiName } = userSnap.data();
+                        let { kedaiName } = userSnap.data();
+
+                        // ✅ fallback default
+                        if (!kedaiName) {
+                            kedaiName = "Apa nama kedai mu?";
+                        }
 
                         const ordersRef = collection(db, "order");
                         const ordersQuery = query(
                             ordersRef,
-                            where("ownerName", "==", kedaiName) // hanya order milik toko ini
+                            where("ownerName", "==", kedaiName)
                         );
 
                         const ordersSnap = await getDocs(ordersQuery);
