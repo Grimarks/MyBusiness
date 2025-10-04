@@ -10,26 +10,22 @@ import CategoryFilter from "../components/CategoryFilter.jsx";
 import FoodCard from "../components/FoodCard.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 
-// Helper untuk ambil thumbnail dari Google Drive
+// Helper ambil thumbnail dari Google Drive
 const getDriveThumbnail = (url, size = "w200-h200") => {
     if (!url) return null;
 
-    // Case: format uc?export=view&id=FILE_ID
     const ucMatch = url.match(/id=([^&]+)/);
     if (ucMatch) {
         return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
     }
 
-    // Case: format file/d/FILE_ID/
     const dMatch = url.match(/\/d\/([^/]+)\//);
     if (dMatch) {
         return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
     }
 
-    // Kalau bukan link drive, kembalikan original
     return url;
 };
-
 
 const FavoritePage = () => {
     const [role, setRole] = useState(null);
@@ -38,6 +34,7 @@ const FavoritePage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [filterLocation, setFilterLocation] = useState("All");
+    const [searchTerm, setSearchTerm] = useState("");
     const [userData, setUserData] = useState(null);
 
     useEffect(() => {
@@ -74,10 +71,9 @@ const FavoritePage = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                if (role === "pelanggan") {
-                    const userId = auth.currentUser?.uid;
+                const userId = auth.currentUser?.uid;
 
-                    // ✅ filter favorite hanya milik user login
+                if (role === "pelanggan") {
                     const favoritesCollection = collection(db, "favorites");
                     const q = query(favoritesCollection, where("userId", "==", userId));
                     const favoriteSnapshot = await getDocs(q);
@@ -105,15 +101,24 @@ const FavoritePage = () => {
                         })
                     );
 
-                    const filteredFavorites = detailedFavorites.filter(
-                        (item) =>
-                            item !== null &&
-                            (filterLocation === "All" || item.location === filterLocation)
-                    );
+                    const filteredFavorites = detailedFavorites
+                        .filter(
+                            (item) =>
+                                item !== null &&
+                                (filterLocation === "All" || item.location === filterLocation)
+                        )
+                        .filter(
+                            (item) =>
+                                (item.name || "")
+                                    .toLowerCase()
+                                    .includes(searchTerm.toLowerCase()) ||
+                                (item.description || "")
+                                    .toLowerCase()
+                                    .includes(searchTerm.toLowerCase())
+                        );
 
                     setFavoriteItemsData(filteredFavorites);
                 } else if (role === "pemilik") {
-                    const userId = auth.currentUser?.uid;
                     const foodsRef = collection(db, "foods");
                     const q = query(foodsRef, where("uid", "==", userId));
                     const snapshot = await getDocs(q);
@@ -128,7 +133,15 @@ const FavoritePage = () => {
                             };
                         })
                         .filter(
-                            (item) => filterLocation === "All" || item.location === filterLocation
+                            (item) =>
+                                (filterLocation === "All" ||
+                                    item.location === filterLocation) &&
+                                ((item.name || "")
+                                        .toLowerCase()
+                                        .includes(searchTerm.toLowerCase()) ||
+                                    (item.description || "")
+                                        .toLowerCase()
+                                        .includes(searchTerm.toLowerCase()))
                         );
 
                     setMyFoods(foodList);
@@ -142,7 +155,7 @@ const FavoritePage = () => {
         };
 
         fetchData();
-    }, [role, filterLocation]);
+    }, [role, filterLocation, searchTerm]);
 
     if (loading) return <Loader message="Memuat data..." />;
     if (error) return <div className="p-4 text-red-500">{error}</div>;
@@ -153,7 +166,8 @@ const FavoritePage = () => {
             <main className="container mx-auto p-4 max-w-2xl">
                 {role === "pelanggan" && (
                     <>
-                        <SearchBar />
+                        {/* ✅ sekarang sama kayak PilihanPage */}
+                        <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
                         <CategoryFilter
                             filterLocation={filterLocation}
                             setFilterLocation={setFilterLocation}
@@ -223,6 +237,13 @@ const FavoritePage = () => {
                             </div>
                         </div>
 
+                        {/* ✅ pakai pola sama kayak PilihanPage */}
+                        <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+                        <CategoryFilter
+                            filterLocation={filterLocation}
+                            setFilterLocation={setFilterLocation}
+                        />
+
                         {myFoods.length > 0 ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                                 {myFoods.map((item) => (
@@ -236,7 +257,6 @@ const FavoritePage = () => {
                                         rating={item.rating?.toFixed(1)}
                                         review={item.review}
                                         isLoved={false}
-                                        onAddToCart={null}
                                     />
                                 ))}
                             </div>

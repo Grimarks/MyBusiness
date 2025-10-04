@@ -29,6 +29,17 @@ export default function HomePage() {
     const [error, setError] = useState(null);
     const [filterFoodCategory, setFilterFoodCategory] = useState("All");
     const [filterLocation, setFilterLocation] = useState("All");
+    const [searchTerm, setSearchTerm] = useState("");
+
+    // Ambil data makanan awal
+    useEffect(() => {
+        const fetchFoods = async () => {
+            const snapshot = await getDocs(collection(db, "foods"));
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setFoods(data);
+        };
+        fetchFoods();
+    }, []);
 
     // Step 1: Pastikan user sudah login
     useEffect(() => {
@@ -86,24 +97,18 @@ export default function HomePage() {
                 }
 
                 if (role === "pemilik") {
-                    // Ambil kedaiName dari user login
                     const userRef = doc(db, "users", userId);
                     const userSnap = await getDoc(userRef);
 
                     if (userSnap.exists()) {
                         let { kedaiName } = userSnap.data();
-
-                        // ✅ fallback default
-                        if (!kedaiName) {
-                            kedaiName = "Apa nama kedai mu?";
-                        }
+                        if (!kedaiName) kedaiName = "Apa nama kedai mu?";
 
                         const ordersRef = collection(db, "order");
                         const ordersQuery = query(
                             ordersRef,
                             where("ownerName", "==", kedaiName)
                         );
-
                         const ordersSnap = await getDocs(ordersQuery);
 
                         const orderList = ordersSnap.docs.map(doc => ({
@@ -111,7 +116,6 @@ export default function HomePage() {
                             ...doc.data(),
                         }));
 
-                        // Hanya hitung order selesai
                         const finishedOrders = orderList.filter(order => order.status === true);
 
                         const total = finishedOrders.reduce(
@@ -119,12 +123,10 @@ export default function HomePage() {
                             0
                         );
 
-                        setOrders(orderList);   // semua pesanan toko ini
-                        setEarnings(total);     // total pendapatan (selesai saja)
+                        setOrders(orderList);
+                        setEarnings(total);
                     }
                 }
-
-
             } catch (err) {
                 console.error("Gagal memuat data:", err);
                 setError("Gagal memuat data.");
@@ -139,18 +141,24 @@ export default function HomePage() {
     if (loading) return <Loader message="Memuat data..." />;
     if (error) return <div>Error: {error}</div>;
 
+    // 🔍 Filter makanan (gabungan search + kategori + lokasi)
+    // 🔍 Filter makanan (gabungan search + kategori + lokasi)
     const filteredFoods = foods.filter((food) => {
+        const name = food.name?.toLowerCase() || "";
+        const desc = food.description?.toLowerCase() || "";
+
+        const matchSearch =
+            name.includes(searchTerm.toLowerCase()) ||
+            desc.includes(searchTerm.toLowerCase());
+
         const matchCategory =
             filterFoodCategory === "All" || food.category === filterFoodCategory;
 
         const matchLocation =
             filterLocation === "All" || food.location === filterLocation;
 
-        return matchCategory && matchLocation;
+        return matchSearch && matchCategory && matchLocation;
     });
-
-    if (loading) return <Loader message="Memuat data..." />;
-    if (error) return <div>Error: {error}</div>;
 
     return (
         <div className="bg-gray-50 min-h-screen pb-16">
@@ -168,9 +176,13 @@ export default function HomePage() {
                             />
                         </div>
                     </div>
-                    <SearchBar placeholder="Mibi mau makan apa hari ini?" />
 
-                    {/* ✅ Filter category */}
+                    <SearchBar
+                        placeholder="Mibi mau makan apa hari ini?"
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                    />
+
                     <CategoryFilter
                         filterLocation={filterLocation}
                         setFilterLocation={setFilterLocation}
@@ -178,25 +190,22 @@ export default function HomePage() {
                         setFilterFoodCategory={setFilterFoodCategory}
                     />
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
-                        {filteredFoods.map((food) => (
-                            <FoodCard
-                                key={food.id}
-                                id={food.id}
-                                image={food.image}
-                                title={food.name}
-                                desc={food.description}
-                                price={food.price}
-                                rating={food.rating}
-                                isLoved={food.isLoved}
-                                onAddToCart={() =>
-                                    console.log(`Added ${food.id} to cart`)
-                                }
-                                review={food.review}
-                            />
-                        ))}
-
-                        {filteredFoods.length === 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 p-4">
+                        {filteredFoods.length > 0 ? (
+                            filteredFoods.map(food => (
+                                <FoodCard
+                                    key={food.id}
+                                    id={food.id}
+                                    image={food.image}
+                                    title={food.name}
+                                    desc={food.description}
+                                    price={food.price}
+                                    rating={food.rating}
+                                    review={food.review}
+                                    isLoved={food.isLoved}
+                                />
+                            ))
+                        ) : (
                             <p className="col-span-full text-center text-gray-500">
                                 Tidak ada makanan ditemukan
                             </p>

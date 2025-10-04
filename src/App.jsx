@@ -18,6 +18,7 @@ import AddFoodPage from "./pages/AddFoodPage.jsx";
 import EditStorePage from "./pages/EditStorePage.jsx";
 import EditFoodPage from "./pages/EditFoodPage.jsx";
 import OrderDetailPage from "./pages/OrderDetailPage.jsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 function App() {
     return (
         <Router>
@@ -41,6 +42,7 @@ function App() {
                 <Route path="/edit-food" element={<EditFoodPage/>} />
                 <Route path="/edit-store" element={<EditStorePage/>} />
                 <Route path="/order" element={<OrderDetailPage/>} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage/>} />
             </Routes>
         </Router>
 

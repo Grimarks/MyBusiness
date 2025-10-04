@@ -26,7 +26,7 @@ const LoginPage = () => {
         try {
             await signInWithEmailAndPassword(auth, email, password);
             console.log("Login successful!");
-            navigate("/home"); // Redirect to home on success
+            navigate("/home");
         } catch (err) {
             setError("Email atau password salah!");
             console.error("Login failed:", err);
@@ -91,7 +91,16 @@ const LoginPage = () => {
                     </button>
                 </form>
 
-                <div className="text-center text-sm mt-12">
+                {/* Lupa Password */}
+                <div className="text-center text-sm mt-4">
+                    <Link to="/forgot-password">
+                        <span className="text-orange-600 font-semibold cursor-pointer hover:underline">
+                            Lupa Password?
+                        </span>
+                    </Link>
+                </div>
+
+                <div className="text-center text-sm mt-6">
                     Belum punya akun?{" "}
                     <Link to="/select-account">
                         <span className="font-bold text-black cursor-pointer hover:underline">Daftar di sini</span>

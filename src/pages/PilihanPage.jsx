@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebaseConfig.js";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
@@ -12,8 +11,6 @@ import BottomNav from "../components/BottomNav.jsx";
 import IncomingOrderCard from "../components/IncomingOrderCard.jsx";
 
 const PilihanPage = () => {
-    const navigate = useNavigate();
-
     const [makananList, setMakananList] = useState([]);
     const [filterLocation, setFilterLocation] = useState("All");
     const [searchTerm, setSearchTerm] = useState("");
@@ -37,7 +34,7 @@ const PilihanPage = () => {
                     console.error("Gagal ambil role user:", err);
                 }
             } else {
-                setRole("guest"); // fallback kalau gak login
+                setRole("guest");
             }
         });
 
@@ -61,7 +58,7 @@ const PilihanPage = () => {
 
     // Ambil data makanan dari Firestore (khusus pelanggan)
     useEffect(() => {
-        if (role !== "pelanggan") return; // ✅ hanya jalan kalau pelanggan
+        if (role !== "pelanggan") return;
 
         const fetchMakanan = async () => {
             try {
@@ -70,7 +67,6 @@ const PilihanPage = () => {
 
                 const makananRef = collection(db, "foods");
 
-                // Query berdasarkan filter lokasi (jika bukan "All")
                 let q;
                 if (filterLocation !== "All") {
                     q = query(makananRef, where("location", "==", filterLocation));
@@ -84,9 +80,14 @@ const PilihanPage = () => {
                     ...doc.data(),
                 }));
 
-                // Filter berdasarkan pencarian nama
-                const filteredData = allData.filter((makanan) =>
-                    (makanan.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+                const filteredData = allData.filter(
+                    (makanan) =>
+                        (makanan.name || "")
+                            .toLowerCase()
+                            .includes(searchTerm.toLowerCase()) ||
+                        (makanan.description || "")
+                            .toLowerCase()
+                            .includes(searchTerm.toLowerCase())
                 );
 
                 setMakananList(filteredData);
@@ -150,7 +151,6 @@ const PilihanPage = () => {
 
             {role === "pemilik" && (
                 <main className="container mx-auto p-4 max-w-2xl">
-                    {/* ✅ tampilkan pesanan masuk */}
                     <IncomingOrderCard />
                 </main>
             )}
