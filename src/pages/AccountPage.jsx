@@ -72,6 +72,7 @@ const AccountPage = () => {
                 <h2 className="text-lg font-bold text-black mb-4">Pengaturan umum</h2>
                 <div className="rounded-xl shadow-sm divide-y divide-gray-200 border border-gray-100">
                     {[
+                        { label: 'Edit Profil', icon: ArrowLeftIcon, path: '/edit-profile' },
                         { label: 'Pointku', icon: CurrencyDollarIcon },
                         { label: 'Bahasa', icon: GlobeAltIcon },
                         { label: 'Tentang', icon: QuestionMarkCircleIcon },
@@ -82,6 +83,7 @@ const AccountPage = () => {
                     ].map((item, idx) => (
                         <div
                             key={idx}
+                            onClick={() => item.path && navigate(item.path)}
                             className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer"
                         >
                             <div className="flex items-center space-x-3">

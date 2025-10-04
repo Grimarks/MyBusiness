@@ -143,13 +143,17 @@ export default function CartPage() {
 
             // 3. Buat order per toko
             for (const [ownerId, ownerItems] of Object.entries(groupedByOwner)) {
-                const total = ownerItems.reduce((sum, it) => sum + it.price * it.qty, 0);
+                const total = ownerItems.reduce(
+                    (sum, it) => sum + it.price * it.qty,
+                    0
+                );
 
                 await addDoc(collection(db, "order"), {
-                    customerName,
+                    customerId: user.uid,            // ✅ simpan uid customer
+                    customerName,                    // ✅ simpan nama customer
                     ownerId,
                     amount: total,
-                    status: false,
+                    status: false,                   // default masih diproses
                     items: ownerItems,
                     createdAt: new Date(),
                 });

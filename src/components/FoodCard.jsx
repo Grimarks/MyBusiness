@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { PlusCircleIcon, ArrowRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import { StarIcon } from "@heroicons/react/24/solid";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "../firebaseConfig.js";

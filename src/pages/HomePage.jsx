@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../firebaseConfig.js";
 import { onAuthStateChanged } from "firebase/auth";
+import {useNavigate} from "react-router-dom";
 
 export default function HomePage() {
     const [role, setRole] = useState(null);
@@ -30,8 +31,9 @@ export default function HomePage() {
     const [filterFoodCategory, setFilterFoodCategory] = useState("All");
     const [filterLocation, setFilterLocation] = useState("All");
     const [searchTerm, setSearchTerm] = useState("");
+    const navigate = useNavigate();
 
-    // Ambil data makanan awal
+    // Ambil semua makanan
     useEffect(() => {
         const fetchFoods = async () => {
             const snapshot = await getDocs(collection(db, "foods"));
@@ -41,7 +43,7 @@ export default function HomePage() {
         fetchFoods();
     }, []);
 
-    // Step 1: Pastikan user sudah login
+    // Auth listener
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -56,7 +58,7 @@ export default function HomePage() {
                         setRole("pelanggan");
                     }
                 } catch (err) {
-                    console.error("Gagal mengambil role user:", err);
+                    console.error("Gagal ambil role user:", err);
                     setRole("pelanggan");
                 }
             } else {
@@ -68,7 +70,7 @@ export default function HomePage() {
         return () => unsubscribe();
     }, []);
 
-    // Step 2: Ambil data sesuai role
+    // Data khusus sesuai role
     useEffect(() => {
         const fetchData = async () => {
             if (!role || !userId) return;
@@ -141,13 +143,13 @@ export default function HomePage() {
     if (loading) return <Loader message="Memuat data..." />;
     if (error) return <div>Error: {error}</div>;
 
-    // 🔍 Filter makanan (gabungan search + kategori + lokasi)
-    // 🔍 Filter makanan (gabungan search + kategori + lokasi)
+    // Filter makanan
     const filteredFoods = foods.filter((food) => {
         const name = food.name?.toLowerCase() || "";
         const desc = food.description?.toLowerCase() || "";
 
         const matchSearch =
+            searchTerm === "" ||
             name.includes(searchTerm.toLowerCase()) ||
             desc.includes(searchTerm.toLowerCase());
 
@@ -170,17 +172,14 @@ export default function HomePage() {
                     >
                         <div className="absolute inset-0 bg-black/40 z-0" />
                         <div className="relative z-10">
-                            <Header
-                                greeting="Halo!"
-                                subtitle={`Selamat datang, Mibi Lovers!`}
-                            />
+                            <Header greeting="Halo!" subtitle="Selamat datang, Mibi Lovers!" />
                         </div>
                     </div>
 
                     <SearchBar
                         placeholder="Mibi mau makan apa hari ini?"
-                        value={searchTerm}
-                        onChange={setSearchTerm}
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
                     />
 
                     <CategoryFilter

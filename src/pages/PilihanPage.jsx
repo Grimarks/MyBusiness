@@ -19,7 +19,7 @@ const PilihanPage = () => {
     const [favoriteIds, setFavoriteIds] = useState([]);
     const [role, setRole] = useState(null);
 
-    // Cek login user & ambil role
+    // cek login user & ambil role
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
             if (user) {
@@ -41,7 +41,7 @@ const PilihanPage = () => {
         return () => unsubscribe();
     }, []);
 
-    // Ambil favorite IDs
+    // ambil favorite IDs
     useEffect(() => {
         const fetchFavoriteIds = async () => {
             try {
@@ -56,7 +56,7 @@ const PilihanPage = () => {
         fetchFavoriteIds();
     }, []);
 
-    // Ambil data makanan dari Firestore (khusus pelanggan)
+    // ambil data makanan dari Firestore (khusus pelanggan)
     useEffect(() => {
         if (role !== "pelanggan") return;
 
@@ -66,12 +66,10 @@ const PilihanPage = () => {
                 setError(null);
 
                 const makananRef = collection(db, "foods");
+                let q = makananRef;
 
-                let q;
                 if (filterLocation !== "All") {
                     q = query(makananRef, where("location", "==", filterLocation));
-                } else {
-                    q = query(makananRef);
                 }
 
                 const snapshot = await getDocs(q);
@@ -82,12 +80,9 @@ const PilihanPage = () => {
 
                 const filteredData = allData.filter(
                     (makanan) =>
-                        (makanan.name || "")
-                            .toLowerCase()
-                            .includes(searchTerm.toLowerCase()) ||
-                        (makanan.description || "")
-                            .toLowerCase()
-                            .includes(searchTerm.toLowerCase())
+                        searchTerm === "" ||
+                        (makanan.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (makanan.description || "").toLowerCase().includes(searchTerm.toLowerCase())
                 );
 
                 setMakananList(filteredData);
@@ -113,7 +108,11 @@ const PilihanPage = () => {
                         alt="Free Delivery Illustration"
                         className="object-contain flex-shrink-0 rounded-3xl p-3"
                     />
-                    <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+                    <SearchBar
+                        placeholder="Mau coba makanan apa?"
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                    />
                     <CategoryFilter
                         filterLocation={filterLocation}
                         setFilterLocation={setFilterLocation}

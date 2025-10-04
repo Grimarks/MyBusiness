@@ -1,66 +1,61 @@
-import React, { useEffect, useState } from "react";
-import { MagnifyingGlassIcon, Cog6ToothIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import React, { useState, useEffect } from "react";
+import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
-export default function SearchBar(props) {
-    const {
-        placeholder = "Cari...",
-        value,
-        onChange,
-        searchTerm,
-        setSearchTerm,
-        className = "",
-    } = props;
-
-    const externalValue = value ?? searchTerm;
-    const externalSetter = typeof onChange === "function" ? onChange : setSearchTerm;
-
-    const [localValue, setLocalValue] = useState(externalValue ?? "");
+export default function SearchBar({
+                                      placeholder = "Cari...",
+                                      searchTerm,
+                                      setSearchTerm,
+                                      className = "",
+                                  }) {
+    const [localValue, setLocalValue] = useState(searchTerm || "");
 
     useEffect(() => {
-        if (externalValue !== undefined && externalValue !== localValue) {
-            setLocalValue(externalValue);
-        }
-    }, [externalValue]);
+        setLocalValue(searchTerm || "");
+    }, [searchTerm]);
 
-    const handleChange = (next) => {
-        if (typeof externalSetter === "function") {
-            externalSetter(next);
-        } else {
-            setLocalValue(next);
+    const handleSearch = () => {
+        setSearchTerm(localValue.trim());
+    };
+
+    const clear = () => {
+        setLocalValue("");
+        setSearchTerm("");
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleSearch();
         }
     };
 
-    const clear = () => handleChange("");
-
     return (
         <div className={`mx-4 mt-2 mb-4 ${className}`}>
-            <div
-                className="flex items-center bg-white rounded-full shadow p-2 sm:p-3 focus-within:ring-2 focus-within:ring-orange-400 transition-shadow duration-200"
-                // ❌ Cegah form submission
-                onSubmit={(e) => e.preventDefault()}
-            >
-                <MagnifyingGlassIcon className="h-5 w-5 text-orange-500 mr-2" />
+            <div className="flex items-center bg-white rounded-full shadow p-2 sm:p-3 focus-within:ring-2 focus-within:ring-orange-400">
                 <input
-                    type="text" // pastikan text, bukan submit
+                    type="text"
                     placeholder={placeholder}
-                    value={externalValue !== undefined ? externalValue : localValue}
-                    onChange={(e) => handleChange(e.target.value)}
+                    value={localValue}
+                    onChange={(e) => setLocalValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className="flex-1 outline-none text-sm sm:text-base text-gray-700"
                 />
-                {(externalValue ?? localValue) ? (
+                {localValue && (
                     <button
-                        onClick={(e) => {
-                            e.preventDefault(); // cegah reload
-                            clear();
-                        }}
-                        className="p-1 rounded-full hover:bg-gray-100 mr-2"
-                        aria-label="Clear search"
                         type="button"
+                        onClick={clear}
+                        className="p-1 rounded-full hover:bg-gray-100 mr-2"
                     >
                         <XMarkIcon className="h-5 w-5 text-gray-400" />
                     </button>
-                ) : null}
-                <Cog6ToothIcon className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
+                )}
+                <button
+                    type="button"
+                    onClick={handleSearch}
+                    className="p-1 rounded-full hover:bg-orange-100"
+                >
+                    <MagnifyingGlassIcon className="h-5 w-5 text-orange-500" />
+                </button>
             </div>
         </div>
     );
