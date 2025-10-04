@@ -18,7 +18,16 @@ import Header from "../components/Header.jsx";
 
 const AccountPage = () => {
     const navigate = useNavigate();
-    const [userData, setUserData] = useState({ nama: '', email: '' });
+    const [userData, setUserData] = useState({ nama: '', email: '', profileImage: '' });
+
+    const getDriveThumbnail = (url, size = "w200-h200") => {
+        if (!url) return "/default-food.png";
+        const ucMatch = url.match(/id=([^&]+)/);
+        if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
+        const dMatch = url.match(/\/d\/([^/]+)\//);
+        if (dMatch) return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
+        return url;
+    };
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -29,16 +38,16 @@ const AccountPage = () => {
                     const data = docSnap.data();
                     setUserData({
                         nama: data.nama || '',
-                        email: data.email || user.email || ''
+                        email: data.email || user.email || '',
+                        profileImage: data.profileImage || ''
                     });
                 } else {
-                    setUserData({ nama: '', email: user.email });
+                    setUserData({ nama: '', email: user.email, profileImage: '' });
                 }
             } else {
                 navigate('/loginpage');
             }
         });
-
         return () => unsubscribe();
     }, [navigate]);
 
@@ -51,14 +60,16 @@ const AccountPage = () => {
         }
     };
 
+    const imgSrc = getDriveThumbnail(userData.profileImage, "w200-h200");
+
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
-            <Header></Header>
+            <Header />
             <div className="text-white pb-6 pt-10 px-6">
                 <div className="flex flex-col items-center mt-4">
                     <div className="bg-white rounded-full p-2 mb-2">
                         <img
-                            src="/profile-placeholder.jpg"
+                            src={imgSrc}
                             alt="Profile"
                             className="w-24 h-24 rounded-full object-cover"
                         />
@@ -67,7 +78,7 @@ const AccountPage = () => {
                 </div>
             </div>
 
-            {/* Content box (putih penuh bawah) */}
+            {/* Content box */}
             <div className="bg-white rounded-t-3xl p-4 pb-28 min-h-[calc(100vh-200px)]">
                 <h2 className="text-lg font-bold text-black mb-4">Pengaturan umum</h2>
                 <div className="rounded-xl shadow-sm divide-y divide-gray-200 border border-gray-100">

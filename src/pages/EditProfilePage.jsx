@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebaseConfig";
-import {
-    onAuthStateChanged,
-    updateEmail,
-    updatePassword,
-} from "firebase/auth";
+import { onAuthStateChanged, updateEmail, updatePassword } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Header from "../components/Header";
 
-const WEB_APP_URL =
-    "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
+const WEB_APP_URL =  "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
+
 
 export default function EditProfilePage() {
     const navigate = useNavigate();
@@ -18,6 +14,15 @@ export default function EditProfilePage() {
     const [image, setImage] = useState(null);
     const [newPassword, setNewPassword] = useState("");
     const [loading, setLoading] = useState(false);
+
+    const getDriveThumbnail = (url, size = "w200-h200") => {
+        if (!url) return "/default-food.png";
+        const ucMatch = url.match(/id=([^&]+)/);
+        if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
+        const dMatch = url.match(/\/d\/([^/]+)\//);
+        if (dMatch) return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
+        return url;
+    };
 
     useEffect(() => {
         onAuthStateChanged(auth, async (user) => {
@@ -28,7 +33,7 @@ export default function EditProfilePage() {
                 setUserData({
                     nama: data.nama || "",
                     email: data.email || user.email,
-                    profileImage: data.profileImage || "/profile-placeholder.jpg",
+                    profileImage: data.profileImage || "",
                 });
             }
         });
@@ -66,22 +71,14 @@ export default function EditProfilePage() {
             let photoUrl = userData.profileImage;
             if (image) photoUrl = await uploadToDrive();
 
-            // Update Firestore
             await updateDoc(doc(db, "users", user.uid), {
                 nama: userData.nama,
                 email: userData.email,
                 profileImage: photoUrl,
             });
 
-            // Update Auth email
-            if (userData.email !== user.email) {
-                await updateEmail(user, userData.email);
-            }
-
-            // Update Auth password
-            if (newPassword) {
-                await updatePassword(user, newPassword);
-            }
+            if (userData.email !== user.email) await updateEmail(user, userData.email);
+            if (newPassword) await updatePassword(user, newPassword);
 
             alert("Profil berhasil diperbarui!");
             navigate("/account");
@@ -93,6 +90,8 @@ export default function EditProfilePage() {
         }
     };
 
+    const imgSrc = getDriveThumbnail(userData.profileImage, "w200-h200");
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400">
             <Header />
@@ -102,7 +101,7 @@ export default function EditProfilePage() {
                 {/* Foto Profil */}
                 <div className="flex flex-col items-center mb-4">
                     <img
-                        src={userData.profileImage}
+                        src={imgSrc}
                         alt="Profile"
                         className="w-24 h-24 rounded-full object-cover mb-2"
                     />
@@ -147,7 +146,6 @@ export default function EditProfilePage() {
                     />
                 </div>
 
-                {/* Tombol Simpan */}
                 <button
                     onClick={handleSave}
                     disabled={loading}
