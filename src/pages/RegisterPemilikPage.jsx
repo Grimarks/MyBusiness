@@ -20,6 +20,12 @@ const RegisterPemilikPage = () => {
         e.preventDefault();
         setError("");
 
+        // 🔒 Validasi password
+        if (password.length < 6 || password.length > 12) {
+            setError("Password harus 6–12 karakter!");
+            return;
+        }
+
         if (password !== confirmPassword) {
             setError("Password dan Konfirmasi Password tidak sama!");
             return;
@@ -35,12 +41,19 @@ const RegisterPemilikPage = () => {
                     email,
                     role: "pemilik",
                     uid: user.uid,
+                    password,
                 });
                 alert("Registrasi berhasil!");
                 navigate("/loginpage");
             }
         } catch (err) {
-            setError(err.message);
+            if (err.code === "auth/email-already-in-use") {
+                setError("Email sudah digunakan! Silakan gunakan email lain.");
+            } else if (err.code === "auth/invalid-email") {
+                setError("Format email tidak valid!");
+            } else {
+                setError("Terjadi kesalahan: " + err.message);
+            }
             console.error("Registration failed:", err);
         } finally {
             setLoading(false);
@@ -62,6 +75,7 @@ const RegisterPemilikPage = () => {
                 <form onSubmit={handleRegister} className="flex flex-col px-6 space-y-6">
                     <h2 className="text-3xl font-bold text-orange-600">Daftar</h2>
 
+                    {/* Nama */}
                     <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl">
                         <input
                             type="text"
@@ -73,6 +87,7 @@ const RegisterPemilikPage = () => {
                         />
                     </div>
 
+                    {/* Email */}
                     <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl">
                         <input
                             type="email"
@@ -88,7 +103,7 @@ const RegisterPemilikPage = () => {
                     <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
                         <input
                             type={showPassword ? "text" : "password"}
-                            placeholder="Password"
+                            placeholder="Password (6–12 karakter)"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="bg-transparent w-full focus:outline-none text-gray-700"
@@ -99,11 +114,11 @@ const RegisterPemilikPage = () => {
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-3 text-gray-500"
                         >
-                            {showPassword ? <EyeSlashIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                            {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                         </button>
                     </div>
 
-                    {/* Confirm Password */}
+                    {/* Konfirmasi Password */}
                     <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
                         <input
                             type={showPassword ? "text" : "password"}

@@ -20,6 +20,13 @@ const RegisterPelangganPage = () => {
         e.preventDefault();
         setError("");
 
+        // 🔹 Validasi panjang password
+        if (password.length < 6 || password.length > 12) {
+            setError("Password harus terdiri dari 6 hingga 12 karakter!");
+            return;
+        }
+
+        // 🔹 Validasi konfirmasi password
         if (password !== confirmPassword) {
             setError("Password dan Konfirmasi Password tidak sama!");
             return;
@@ -29,18 +36,29 @@ const RegisterPelangganPage = () => {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
+
             if (user) {
                 await setDoc(doc(db, "users", user.uid), {
                     nama,
                     email,
                     role: "pelanggan",
                     uid: user.uid,
+                    password, // hanya untuk testing — hapus di production!
                 });
                 alert("Registrasi berhasil!");
                 navigate("/loginpage");
             }
         } catch (err) {
-            setError(err.message);
+            // Firebase error handling
+            if (err.code === "auth/email-already-in-use") {
+                setError("Email sudah terdaftar. Silakan gunakan email lain!");
+            } else if (err.code === "auth/invalid-email") {
+                setError("Format email tidak valid!");
+            } else if (err.code === "auth/weak-password") {
+                setError("Password terlalu lemah! Minimal 6 karakter.");
+            } else {
+                setError(err.message);
+            }
             console.error("Registration failed:", err);
         } finally {
             setLoading(false);
@@ -88,9 +106,11 @@ const RegisterPelangganPage = () => {
                     <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
                         <input
                             type={showPassword ? "text" : "password"}
-                            placeholder="Password"
+                            placeholder="Password (6–12 karakter)"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            minLength={6}
+                            maxLength={12}
                             className="bg-transparent w-full focus:outline-none text-gray-700"
                             required
                         />
@@ -99,7 +119,7 @@ const RegisterPelangganPage = () => {
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-3 text-gray-500"
                         >
-                            {showPassword ? <EyeSlashIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                            {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                         </button>
                     </div>
 
@@ -110,6 +130,8 @@ const RegisterPelangganPage = () => {
                             placeholder="Konfirmasi Password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
+                            minLength={6}
+                            maxLength={12}
                             className="bg-transparent w-full focus:outline-none text-gray-700"
                             required
                         />
