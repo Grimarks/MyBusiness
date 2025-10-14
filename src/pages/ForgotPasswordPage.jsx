@@ -20,10 +20,11 @@ const ForgotPasswordPage = () => {
         setError("");
         setSuccess("");
 
-        if (newPassword.length !== 6) {
-            setError("Password baru harus 6 karakter!");
+        if (newPassword.length < 6 || newPassword.length > 12) {
+            setError("Password HARUS minimal 6 karakter dan maksimal 12 karakter!");
             return;
         }
+
         if (newPassword !== confirmPassword) {
             setError("Password konfirmasi tidak cocok!");
             return;
