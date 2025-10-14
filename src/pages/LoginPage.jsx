@@ -17,7 +17,7 @@ const LoginPage = () => {
         e.preventDefault();
         setError("");
 
-        if (password.length >= 6 && password.length <= 12) {
+        if (password.length < 6 || password.length > 12) {
             setError("Password HARUS minimal 6 karakter dan maksimal 12 karakter!");
             return;
         }
