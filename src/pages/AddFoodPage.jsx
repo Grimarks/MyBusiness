@@ -12,6 +12,7 @@ export default function AddFoodPage() {
     const [location, setLocation] = useState("Indralaya");
     const [image, setImage] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [status, setStatus] = useState(true);
 
     const WEB_APP_URL =
         "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
@@ -53,17 +54,22 @@ export default function AddFoodPage() {
             const imageUrl = await uploadToDrive();
             const uid = auth.currentUser?.uid || "unknown";
 
+            // Tentukan status otomatis:
+            const finalStatus =
+                stock && parseInt(stock) > 0 ? true : status; // jika stock kosong, gunakan pilihan user
+
             await addDoc(collection(db, "foods"), {
                 name,
                 description,
                 price: parseInt(price),
-                stock: parseInt(stock),
+                stock: parseInt(stock) || 0,
                 category,
                 location,
                 image: imageUrl,
                 uid,
                 rating: 0,
                 review: 0,
+                status: finalStatus,
             });
 
             alert("Menu berhasil ditambahkan!");
@@ -74,6 +80,7 @@ export default function AddFoodPage() {
             setCategory("Cepat Saji");
             setLocation("Indralaya");
             setImage(null);
+            setStatus(true);
         } catch (err) {
             console.error(err);
             alert("Gagal upload!");
@@ -136,6 +143,20 @@ export default function AddFoodPage() {
                         required
                     />
                 </div>
+
+                {!stock && (
+                    <div>
+                        <label className="block font-semibold">Status Ketersediaan</label>
+                        <select
+                            className="w-full p-2 border rounded-lg"
+                            value={status ? "ready" : "habis"}
+                            onChange={(e) => setStatus(e.target.value === "ready")}
+                        >
+                            <option value="ready">Ready</option>
+                            <option value="habis">Habis</option>
+                        </select>
+                    </div>
+                )}
 
                 <div>
                     <label className="block font-semibold">Kategori</label>

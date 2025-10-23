@@ -90,6 +90,19 @@ export default function FoodCard({
     const [showModal, setShowModal] = useState(false);
     const navigate = useNavigate();
     const imgSrc = getDriveThumbnail(image, "w600-h600");
+    const [status, setStatus] = useState(true); // default ready
+
+    useEffect(() => {
+        const fetchStatus = async () => {
+            const foodRef = doc(db, "foods", id);
+            const foodSnap = await getDoc(foodRef);
+            if (foodSnap.exists()) {
+                setStatus(foodSnap.data().status ?? true);
+            }
+        };
+        fetchStatus();
+    }, [id]);
+
 
     const toggleLove = async () => {
         const newLoveState = !isLoved;
@@ -123,6 +136,12 @@ export default function FoodCard({
                 className="relative bg-white rounded-xl shadow-md p-3 sm:p-4 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
                 onClick={() => setShowModal(true)}
             >
+                {!status && (
+                    <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">
+                        Habis
+                    </span>
+                )}
+
                 {/* Love Icon */}
                 <button
                     onClick={(e) => {
@@ -140,7 +159,13 @@ export default function FoodCard({
 
                 {/* Image */}
                 <div className="rounded-xl h-32 w-full overflow-hidden mb-2 sm:mb-3">
-                    <img src={imgSrc} alt={title} className="w-full h-full object-cover" />
+                    <img
+                        src={imgSrc}
+                        alt={title}
+                        className={`w-full h-full object-cover transition ${
+                            !status ? "grayscale opacity-60" : ""
+                        }`}
+                    />
                 </div>
 
                 {/* Title & Description */}
@@ -202,24 +227,53 @@ export default function FoodCard({
                         {roleUser === "pelanggan" ? (
                             <button
                                 onClick={() => {
+                                    if (!status) return; // jangan tambah ke keranjang jika habis
                                     addToCart({ id, title, image: imgSrc, price });
                                     onAddToCart && onAddToCart();
                                     setShowModal(false);
                                 }}
-                                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition"
+                                disabled={!status}
+                                className={`w-full font-semibold py-2 rounded-lg transition ${
+                                    status
+                                        ? "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
+                                        : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                                }`}
                             >
-                                Tambahkan ke keranjang
+                                {status ? "Tambahkan ke keranjang" : "Habis"}
                             </button>
                         ) : (
-                            <button
-                                onClick={() => {
-                                    navigate("/edit-food", { state: { foodId: id } });
-                                    setShowModal(false);
-                                }}
-                                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition"
-                            >
-                                Edit makanan
-                            </button>
+                            <>
+                                <button
+                                    onClick={() => {
+                                        navigate("/edit-food", { state: { foodId: id } });
+                                        setShowModal(false);
+                                    }}
+                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition mb-2"
+                                >
+                                    Edit makanan
+                                </button>
+
+                                {/* === Tombol Ubah Status Ready/Habis === */}
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const foodRef = doc(db, "foods", id);
+                                            const newStatus = !status;
+                                            await updateDoc(foodRef, { status: newStatus });
+                                            setStatus(newStatus);
+                                            alert(`Status makanan diubah menjadi ${newStatus ? "READY" : "HABIS"}`);
+                                        } catch (err) {
+                                            console.error("Gagal mengubah status:", err);
+                                            alert("Gagal mengubah status makanan!");
+                                        }
+                                    }}
+                                    className={`w-full ${
+                                        status ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"
+                                    } text-white font-semibold py-2 rounded-lg transition`}
+                                >
+                                    {status ? "Tandai Habis" : "Tandai Ready"}
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
