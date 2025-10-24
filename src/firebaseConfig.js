@@ -1,20 +1,48 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, setDoc } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // Tambahkan ini untuk Auth
+import {
+    getFirestore,
+    collection,
+    doc,
+    getDocs,
+    getDoc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    setDoc,
+} from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 
+// 🧩 Ambil credential dari .env
 const firebaseConfig = {
-    apiKey: "AIzaSyCgCEQDcouDobhaiD_frDny7qjpqUh-9iM",
-    authDomain: "mybusiness-4ad43.firebaseapp.com",
-    projectId: "mybusiness-4ad43",
-    storageBucket: "mybusiness-4ad43.firebasestorage.app",
-    messagingSenderId: "389417803870",
-    appId: "1:389417803870:web:f5b6ce03fa269a3f8014cf"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY ,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Inisialisasi Firebase App dan ekspor
-export const app = initializeApp(firebaseConfig); // <-- Tambahkan 'export' di sini
-export const db = getFirestore(app);
-export const auth = getAuth(app); // <-- Ekspor juga instance Auth
+// 🚀 Inisialisasi Firebase App
+const app = initializeApp(firebaseConfig);
 
-// Export Firestore functions for easier use
-export { collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, setDoc };
+// 📦 Ekspor instance Firebase
+const db = getFirestore(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
+
+// 🧰 Ekspor fungsi Firestore biar tetap bisa dipakai langsung
+export {
+    app,
+    db,
+    auth,
+    storage,
+    collection,
+    doc,
+    getDocs,
+    getDoc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    setDoc,
+};
