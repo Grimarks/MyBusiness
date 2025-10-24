@@ -70,7 +70,7 @@ export default function Header({ greeting, subtitle }) {
                 {role === "pelanggan" && (
                     <div className="flex items-center space-x-2 sm:space-x-4">
                         <button
-                            onClick={() => navigate("/my-orders")}
+                            onClick={() => navigate("/myOrder")}
                             className={iconButtonStyle}
                         >
                             <ClipboardDocumentListIcon className="h-6 w-6 text-orange-600" />
