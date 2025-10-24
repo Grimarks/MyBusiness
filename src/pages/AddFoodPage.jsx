@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { addDoc, collection } from "firebase/firestore";
 import { db, auth } from "../firebaseConfig";
-import Header from "../components/Header.jsx"
+import Header from "../components/Header.jsx";
 
 export default function AddFoodPage() {
     const [name, setName] = useState("");
@@ -17,7 +17,14 @@ export default function AddFoodPage() {
     const WEB_APP_URL =
         "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
 
-    // Upload ke Google Drive via Apps Script
+    const toBase64 = (file) =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (err) => reject(err);
+        });
+
     const uploadToDrive = async () => {
         const base64 = await toBase64(image);
         const res = await fetch(WEB_APP_URL, {
@@ -28,36 +35,19 @@ export default function AddFoodPage() {
                 filename: image.name,
             }),
         });
-
         const result = await res.json();
-        if (result.success) {
-            return result.url;
-        } else {
-            throw new Error(result.error || "Upload gagal");
-        }
+        if (result.success) return result.url;
+        throw new Error(result.error || "Upload gagal");
     };
-
-    const toBase64 = (file) =>
-        new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = (err) => reject(err);
-        });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!image) return alert("Pilih gambar dulu");
         setLoading(true);
-
         try {
             const imageUrl = await uploadToDrive();
             const uid = auth.currentUser?.uid || "unknown";
-
-            // Tentukan status otomatis:
-            const finalStatus =
-                stock && parseInt(stock) > 0 ? true : status; // jika stock kosong, gunakan pilihan user
-
+            const finalStatus = stock && parseInt(stock) > 0 ? true : status;
             await addDoc(collection(db, "foods"), {
                 name,
                 description,
@@ -71,7 +61,6 @@ export default function AddFoodPage() {
                 review: 0,
                 status: finalStatus,
             });
-
             alert("Menu berhasil ditambahkan!");
             setName("");
             setDescription("");
@@ -90,19 +79,18 @@ export default function AddFoodPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 ">
+        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 flex flex-col">
             <Header title="Tambah Menu" />
-
             <form
                 onSubmit={handleSubmit}
-                className="p-4 max-w-md mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4"
+                className="flex-1 p-4 sm:p-6 max-w-md w-full mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4 sm:mt-6"
             >
                 <div>
-                    <label className="block font-semibold">Nama</label>
+                    <label className="block font-semibold text-sm sm:text-base">Nama</label>
                     <input
                         type="text"
                         placeholder="Masukan nama menu"
-                        className="w-full p-2 border rounded-lg"
+                        className="w-full p-2 sm:p-3 border rounded-lg text-sm sm:text-base"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
@@ -110,45 +98,48 @@ export default function AddFoodPage() {
                 </div>
 
                 <div>
-                    <label className="block font-semibold">Deskripsi</label>
+                    <label className="block font-semibold text-sm sm:text-base">Deskripsi</label>
                     <textarea
                         placeholder="Masukan deskripsi menu"
-                        className="w-full p-2 border rounded-lg"
+                        className="w-full p-2 sm:p-3 border rounded-lg text-sm sm:text-base"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         required
                     />
                 </div>
 
-                <div>
-                    <label className="block font-semibold">Harga</label>
-                    <input
-                        type="number"
-                        placeholder="Masukan harga menu"
-                        className="w-full p-2 border rounded-lg"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        required
-                    />
-                </div>
-
-                <div>
-                    <label className="block font-semibold">Stock</label>
-                    <input
-                        type="number"
-                        placeholder="Masukan stock"
-                        className="w-full p-2 border rounded-lg"
-                        value={stock}
-                        onChange={(e) => setStock(e.target.value)}
-                        required
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label className="block font-semibold text-sm sm:text-base">Harga</label>
+                        <input
+                            type="number"
+                            placeholder="Masukan harga"
+                            className="w-full p-2 sm:p-3 border rounded-lg"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block font-semibold text-sm sm:text-base">Stock</label>
+                        <input
+                            type="number"
+                            placeholder="Masukan stock"
+                            className="w-full p-2 sm:p-3 border rounded-lg"
+                            value={stock}
+                            onChange={(e) => setStock(e.target.value)}
+                            required
+                        />
+                    </div>
                 </div>
 
                 {!stock && (
                     <div>
-                        <label className="block font-semibold">Status Ketersediaan</label>
+                        <label className="block font-semibold text-sm sm:text-base">
+                            Status Ketersediaan
+                        </label>
                         <select
-                            className="w-full p-2 border rounded-lg"
+                            className="w-full p-2 sm:p-3 border rounded-lg"
                             value={status ? "ready" : "habis"}
                             onChange={(e) => setStatus(e.target.value === "ready")}
                         >
@@ -158,38 +149,39 @@ export default function AddFoodPage() {
                     </div>
                 )}
 
-                <div>
-                    <label className="block font-semibold">Kategori</label>
-                    <select
-                        className="w-full p-2 border rounded-lg"
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                    >
-                        <option value="Cepat Saji">Cepat Saji</option>
-                        <option value="Ayam Geprek">Ayam Geprek</option>
-                        <option value="Mie">Mie</option>
-                        <option value="Sayur">Sayur</option>
-                    </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label className="block font-semibold text-sm sm:text-base">Kategori</label>
+                        <select
+                            className="w-full p-2 sm:p-3 border rounded-lg"
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                        >
+                            <option value="Cepat Saji">Cepat Saji</option>
+                            <option value="Ayam Geprek">Ayam Geprek</option>
+                            <option value="Mie">Mie</option>
+                            <option value="Sayur">Sayur</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block font-semibold text-sm sm:text-base">Lokasi</label>
+                        <select
+                            className="w-full p-2 sm:p-3 border rounded-lg"
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                        >
+                            <option value="Indralaya">Indralaya</option>
+                            <option value="Bukit">Bukit</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div>
-                    <label className="block font-semibold">Lokasi</label>
-                    <select
-                        className="w-full p-2 border rounded-lg"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                    >
-                        <option value="Indralaya">Indralaya</option>
-                        <option value="Bukit">Bukit</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block font-semibold">Foto</label>
+                    <label className="block font-semibold text-sm sm:text-base">Foto</label>
                     <input
                         type="file"
                         accept="image/*"
-                        className="w-full"
+                        className="w-full text-sm sm:text-base"
                         onChange={(e) => setImage(e.target.files[0])}
                         required
                     />
@@ -197,7 +189,7 @@ export default function AddFoodPage() {
 
                 <button
                     type="submit"
-                    className="w-full bg-yellow-400 text-black py-3 rounded-full font-semibold hover:bg-yellow-500 transition-colors"
+                    className="w-full bg-yellow-400 text-black py-3 rounded-full font-semibold hover:bg-yellow-500 transition-colors text-sm sm:text-base"
                     disabled={loading}
                 >
                     {loading ? "Mengupload..." : "Simpan"}

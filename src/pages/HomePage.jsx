@@ -7,7 +7,6 @@ import BottomNav from "../components/BottomNav";
 import Loader from "../components/Loader";
 import EarningsCard from "../components/EarningsCard";
 import IncomingOrderCard from "../components/IncomingOrderCard";
-
 import {
     collection,
     getDocs,
@@ -18,7 +17,6 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../firebaseConfig.js";
 import { onAuthStateChanged } from "firebase/auth";
-import {useNavigate} from "react-router-dom";
 
 export default function HomePage() {
     const [role, setRole] = useState(null);
@@ -31,19 +29,18 @@ export default function HomePage() {
     const [filterFoodCategory, setFilterFoodCategory] = useState("All");
     const [filterLocation, setFilterLocation] = useState("All");
     const [searchTerm, setSearchTerm] = useState("");
-    const navigate = useNavigate();
 
-    // Ambil semua makanan
+    // 🔹 Ambil semua makanan
     useEffect(() => {
         const fetchFoods = async () => {
             const snapshot = await getDocs(collection(db, "foods"));
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             setFoods(data);
         };
         fetchFoods();
     }, []);
 
-    // Auth listener
+    // 🔹 Auth listener
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -70,7 +67,7 @@ export default function HomePage() {
         return () => unsubscribe();
     }, []);
 
-    // Data khusus sesuai role
+    // 🔹 Data sesuai role
     useEffect(() => {
         const fetchData = async () => {
             if (!role || !userId) return;
@@ -80,7 +77,7 @@ export default function HomePage() {
                 if (role === "pelanggan") {
                     const foodsCollection = collection(db, "foods");
                     const foodSnapshot = await getDocs(foodsCollection);
-                    const rawFoodList = foodSnapshot.docs.map(doc => ({
+                    const rawFoodList = foodSnapshot.docs.map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     }));
@@ -88,9 +85,9 @@ export default function HomePage() {
                     const favoritesRef = collection(db, "favorites");
                     const q = query(favoritesRef, where("userId", "==", userId));
                     const favSnapshot = await getDocs(q);
-                    const favIds = favSnapshot.docs.map(doc => doc.data().foodId);
+                    const favIds = favSnapshot.docs.map((doc) => doc.data().foodId);
 
-                    const foodList = rawFoodList.map(food => ({
+                    const foodList = rawFoodList.map((food) => ({
                         ...food,
                         isLoved: favIds.includes(food.id),
                     }));
@@ -104,26 +101,19 @@ export default function HomePage() {
 
                     if (userSnap.exists()) {
                         let { kedaiName } = userSnap.data();
-                        if (!kedaiName) kedaiName = "Apa nama kedai mu?";
+                        if (!kedaiName) kedaiName = "Nama Kedaimu";
 
                         const ordersRef = collection(db, "order");
-                        const ordersQuery = query(
-                            ordersRef,
-                            where("ownerName", "==", kedaiName)
-                        );
+                        const ordersQuery = query(ordersRef, where("ownerName", "==", kedaiName));
                         const ordersSnap = await getDocs(ordersQuery);
 
-                        const orderList = ordersSnap.docs.map(doc => ({
+                        const orderList = ordersSnap.docs.map((doc) => ({
                             id: doc.id,
                             ...doc.data(),
                         }));
 
-                        const finishedOrders = orderList.filter(order => order.status === true);
-
-                        const total = finishedOrders.reduce(
-                            (acc, order) => acc + (order.amount || 0),
-                            0
-                        );
+                        const finishedOrders = orderList.filter((order) => order.status === true);
+                        const total = finishedOrders.reduce((acc, order) => acc + (order.amount || 0), 0);
 
                         setOrders(orderList);
                         setEarnings(total);
@@ -131,7 +121,7 @@ export default function HomePage() {
                 }
             } catch (err) {
                 console.error("Gagal memuat data:", err);
-                setError("Gagal memuat data.");
+                setError("Terjadi kesalahan saat memuat data.");
             } finally {
                 setLoading(false);
             }
@@ -141,9 +131,9 @@ export default function HomePage() {
     }, [role, userId]);
 
     if (loading) return <Loader message="Memuat data..." />;
-    if (error) return <div>Error: {error}</div>;
+    if (error) return <div className="text-center text-red-500 mt-10">{error}</div>;
 
-    // Filter makanan
+    // 🔹 Filter makanan
     const filteredFoods = foods.filter((food) => {
         const name = food.name?.toLowerCase() || "";
         const desc = food.description?.toLowerCase() || "";
@@ -163,14 +153,15 @@ export default function HomePage() {
     });
 
     return (
-        <div className="bg-gray-50 min-h-screen pb-16">
+        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
+            {/* ==================== PELANGGAN VIEW ==================== */}
             {role === "pelanggan" && (
-                <>
+                <main className="container mx-auto p-4 max-w-6xl">
                     <div
-                        className="relative h-64 sm:h-80 bg-cover bg-center"
+                        className="relative h-64 sm:h-80 bg-cover bg-center shadow-lg rounded-3xl mb-6"
                         style={{ backgroundImage: `url('/Cookies.png')` }}
                     >
-                        <div className="absolute inset-0 bg-black/40 z-0" />
+                        <div className="absolute inset-0 bg-black/40 rounded-3xl" />
                         <div className="relative z-10">
                             <Header greeting="Halo!" subtitle="Selamat datang, Mibi Lovers!" />
                         </div>
@@ -189,9 +180,9 @@ export default function HomePage() {
                         setFilterFoodCategory={setFilterFoodCategory}
                     />
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 p-4">
-                        {filteredFoods.length > 0 ? (
-                            filteredFoods.map(food => (
+                    {filteredFoods.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 p-4 transition-all duration-300">
+                            {filteredFoods.map((food) => (
                                 <FoodCard
                                     key={food.id}
                                     id={food.id}
@@ -203,32 +194,34 @@ export default function HomePage() {
                                     review={food.review}
                                     isLoved={food.isLoved}
                                 />
-                            ))
-                        ) : (
-                            <p className="col-span-full text-center text-gray-500">
-                                Tidak ada makanan ditemukan
-                            </p>
-                        )}
-                    </div>
-                </>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-center text-gray-100 italic py-12">
+                            Tidak ada makanan yang cocok dengan pencarianmu 🍽️
+                        </p>
+                    )}
+                </main>
             )}
 
+            {/* ==================== PEMILIK VIEW ==================== */}
             {role === "pemilik" && (
-                <>
+                <main className="container mx-auto p-4 max-w-6xl">
                     <div
-                        className="relative h-64 sm:h-80 bg-no-repeat bg-cover bg-center rounded-b-[40px] overflow-hidden"
+                        className="relative h-64 sm:h-80 bg-no-repeat bg-cover bg-center rounded-b-[40px] overflow-hidden shadow-md mb-6"
                         style={{ backgroundImage: `url('/Mask group.png')` }}
                     >
-                        <div className="absolute inset-0 bg-black/40 z-0" />
+                        <div className="absolute inset-0 bg-black/40" />
                         <div className="relative z-10">
                             <Header greeting="Halo!" subtitle="Selamat datang, Admin!" />
                         </div>
                     </div>
-                    <div className="px-4 mt-4 space-y-6">
-                        <EarningsCard total={earnings} />
+
+                    <EarningsCard total={earnings} />
+                    <div className="bg-white rounded-2xl shadow-lg p-4 mt-6 transition-all hover:shadow-orange-200">
                         <IncomingOrderCard orders={orders} />
                     </div>
-                </>
+                </main>
             )}
 
             <BottomNav active="Home" />

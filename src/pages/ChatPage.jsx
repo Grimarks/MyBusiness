@@ -42,7 +42,7 @@ export default function ChatPage() {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // ambil role dari collection users
+                // Ambil role dari collection users
                 const usersSnap = await getDocs(
                     query(collection(db, "users"), where("uid", "==", user.uid))
                 );
@@ -58,12 +58,10 @@ export default function ChatPage() {
                             ...doc.data(),
                         }));
 
-                        // filter sesuai role
+                        // Filter sesuai role
                         if (userData.role === "pemilik") {
-                            // hanya ambil chat dari pelanggan
                             data = data.filter((c) => c.name.startsWith("Cust"));
                         } else {
-                            // hanya ambil chat dari kedai
                             data = data.filter((c) => !c.name.startsWith("Cust"));
                         }
 
@@ -86,27 +84,27 @@ export default function ChatPage() {
             <Header />
             <SearchBar placeholder="Cari pesan" />
 
-            <div className="px-4 mt-4 space-y-3">
+            <div className="px-3 sm:px-6 mt-4 space-y-3 sm:space-y-4 max-w-2xl mx-auto w-full">
                 {loading ? (
-                    <p className="text-white text-center">Loading chats...</p>
+                    <p className="text-white text-center text-sm sm:text-base">Loading chats...</p>
                 ) : chats.length === 0 ? (
-                    <p className="text-white text-center">Belum ada pesan.</p>
+                    <p className="text-white text-center text-sm sm:text-base">Belum ada pesan.</p>
                 ) : (
                     chats.map((chat) => (
                         <div
                             key={chat.id}
-                            className="bg-white rounded-xl px-4 py-3 flex justify-between items-center shadow"
+                            className="bg-white rounded-xl px-4 py-3 flex justify-between items-center shadow hover:shadow-md transition-all duration-200 w-full"
                         >
-                            <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 rounded-full bg-gray-400" />
-                                <div>
-                                    <p className="font-semibold text-sm">{chat.name}</p>
-                                    <p className="text-gray-600 text-xs truncate w-40">
+                            <div className="flex items-center space-x-3 min-w-0">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                    <p className="font-semibold text-sm sm:text-base truncate">{chat.name}</p>
+                                    <p className="text-gray-600 text-xs sm:text-sm truncate max-w-[10rem] sm:max-w-[14rem]">
                                         {chat.message}
                                     </p>
                                 </div>
                             </div>
-                            <div className="text-gray-500 text-xs whitespace-nowrap">
+                            <div className="text-gray-500 text-xs sm:text-sm ml-2 flex-shrink-0 whitespace-nowrap">
                                 {formatDate(chat.time?.toDate ? chat.time.toDate() : chat.time)}
                             </div>
                         </div>

@@ -1,16 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { auth, db } from "../firebaseConfig.js";
-import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    query,
-    where
-} from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 
-// Komponen
 import Header from "../components/Header.jsx";
 import SearchBar from "../components/SearchBar.jsx";
 import CategoryFilter from "../components/CategoryFilter.jsx";
@@ -19,7 +11,6 @@ import BottomNav from "../components/BottomNav.jsx";
 import Loader from "../components/Loader.jsx";
 import { PlusCircleIcon, StarIcon } from "@heroicons/react/24/outline";
 
-// Helper ambil thumbnail dari Google Drive
 const getDriveThumbnail = (url, size = "w200-h200") => {
     if (!url) return null;
     const ucMatch = url.match(/id=([^&]+)/);
@@ -34,13 +25,11 @@ const FavoritePage = () => {
     const [favoriteItems, setFavoriteItems] = useState([]);
     const [myFoods, setMyFoods] = useState([]);
     const [userData, setUserData] = useState(null);
-
     const [filterLocation, setFilterLocation] = useState("All");
-    const [searchTerm, setSearchTerm] = useState(""); // 🔎 controlled by SearchBar
+    const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // cek role user
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
             if (user) {
@@ -63,10 +52,8 @@ const FavoritePage = () => {
         return () => unsubscribe();
     }, []);
 
-    // ambil data favorit (pelanggan) atau menu sendiri (pemilik)
     useEffect(() => {
         if (!role) return;
-
         const fetchData = async () => {
             try {
                 setLoading(true);
@@ -99,14 +86,15 @@ const FavoritePage = () => {
                     const filtered = detailed
                         .filter(
                             (item) =>
-                                item &&
-                                (filterLocation === "All" || item.location === filterLocation)
+                                item && (filterLocation === "All" || item.location === filterLocation)
                         )
                         .filter(
                             (item) =>
                                 searchTerm === "" ||
                                 (item.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                (item.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+                                (item.description || "")
+                                    .toLowerCase()
+                                    .includes(searchTerm.toLowerCase())
                         );
 
                     setFavoriteItems(filtered);
@@ -130,8 +118,12 @@ const FavoritePage = () => {
                             (item) =>
                                 (filterLocation === "All" || item.location === filterLocation) &&
                                 (searchTerm === "" ||
-                                    (item.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    (item.description || "").toLowerCase().includes(searchTerm.toLowerCase()))
+                                    (item.name || "")
+                                        .toLowerCase()
+                                        .includes(searchTerm.toLowerCase()) ||
+                                    (item.description || "")
+                                        .toLowerCase()
+                                        .includes(searchTerm.toLowerCase()))
                         );
 
                     setMyFoods(myList);
@@ -154,13 +146,13 @@ const FavoritePage = () => {
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
             <Header />
 
-            {/* pelanggan */}
+            {/* Pelanggan */}
             {role === "pelanggan" && (
-                <main className="container mx-auto p-4 max-w-2xl">
+                <main className="container mx-auto p-4 max-w-6xl">
                     <img
                         src="/promo.png"
                         alt="Promo"
-                        className="object-contain flex-shrink-0 rounded-3xl mb-4"
+                        className="object-contain rounded-3xl mb-4 w-full max-h-48 sm:max-h-64 md:max-h-72"
                     />
                     <SearchBar
                         placeholder="Cari makanan favoritmu..."
@@ -173,19 +165,9 @@ const FavoritePage = () => {
                     />
 
                     {favoriteItems.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 p-4 transition-all duration-300">
                             {favoriteItems.map((item) => (
-                                <FoodCard
-                                    key={item.id}
-                                    id={item.id}
-                                    image={item.image}
-                                    title={item.name}
-                                    desc={item.description}
-                                    price={item.price}
-                                    rating={item.rating}
-                                    isLoved={true}
-                                    review={item.review}
-                                />
+                                <FoodCard key={item.id} {...item} isLoved={true} />
                             ))}
                         </div>
                     ) : (
@@ -208,23 +190,22 @@ const FavoritePage = () => {
                 </main>
             )}
 
-            {/* pemilik */}
+            {/* Pemilik */}
             {role === "pemilik" && (
-                <main className="container mx-auto p-4 max-w-2xl">
-                    <div className="bg-white rounded-2xl mb-4 p-2">
-                        <h2 className="text-3xl font-bold text-orange-500">
+                <main className="container mx-auto p-4 max-w-6xl">
+                    <div className="bg-white rounded-2xl mb-6 p-4 shadow-md">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-orange-500 mb-2">
                             {userData?.kedaiName || "Nama Kedai"}
                         </h2>
                         <img
                             src={getDriveThumbnail(userData?.kedaiImage) || "/default-store.png"}
                             alt="Foto Kedai"
-                            className="object-contain w-full h-36 rounded-xl"
+                            className="object-cover w-full h-40 sm:h-48 md:h-56 rounded-xl mb-3"
                         />
-
                         <div className="flex justify-end">
                             <Link
                                 to="/edit-store"
-                                className="bg-orange-500 text-white px-2 py-1 text-sm rounded-md font-medium hover:bg-orange-600 transition-colors"
+                                className="bg-orange-500 text-white px-3 py-1.5 text-sm rounded-md font-medium hover:bg-orange-600 transition-colors"
                             >
                                 Edit Profil
                             </Link>
@@ -242,19 +223,9 @@ const FavoritePage = () => {
                     />
 
                     {myFoods.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                             {myFoods.map((item) => (
-                                <FoodCard
-                                    key={item.id}
-                                    id={item.id}
-                                    image={item.image}
-                                    title={item.name}
-                                    desc={item.description}
-                                    price={item.price}
-                                    rating={item.rating}
-                                    isLoved={false}
-                                    review={item.review}
-                                />
+                                <FoodCard key={item.id} {...item} isLoved={false} />
                             ))}
                         </div>
                     ) : (
@@ -276,10 +247,9 @@ const FavoritePage = () => {
 
                     <Link
                         to="/add-food"
-                        className="fixed bottom-24 right-4 bg-gradient-to-br from-orange-500 to-orange-600
-                            text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform"
+                        className="fixed bottom-24 right-4 sm:right-8 bg-gradient-to-br from-orange-500 to-orange-600 text-white p-4 sm:p-5 rounded-full shadow-lg hover:scale-110 transition-transform"
                     >
-                        <PlusCircleIcon className="h-7 w-7" />
+                        <PlusCircleIcon className="h-7 w-7 sm:h-8 sm:w-8" />
                     </Link>
                 </main>
             )}

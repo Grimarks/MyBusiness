@@ -7,15 +7,10 @@ import Header from "../components/Header.jsx";
 // === Helpers ===
 const getDriveThumbnail = (url, size = "w200-h200") => {
     if (!url) return "/default-food.png";
-
     const ucMatch = url.match(/id=([^&]+)/);
-    if (ucMatch)
-        return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
-
+    if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
     const dMatch = url.match(/\/d\/([^/]+)\//);
-    if (dMatch)
-        return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
-
+    if (dMatch) return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
     return url;
 };
 
@@ -34,7 +29,6 @@ export default function EditFoodPage() {
     const [imageFile, setImageFile] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    // ✅ Samakan dengan AddFoodPage
     const WEB_APP_URL =
         "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
 
@@ -120,29 +114,27 @@ export default function EditFoodPage() {
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400">
             <Header title="Edit Menu" />
             <form
-                className="p-4 max-w-md mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4"
+                className="p-4 sm:p-6 max-w-lg mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4 sm:mt-8 w-[90%] sm:w-full"
                 onSubmit={handleSubmit}
             >
                 <input
                     type="text"
                     placeholder="Nama Menu"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                     value={form.name || ""}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
                 />
                 <textarea
                     placeholder="Deskripsi Menu"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                     value={form.description || ""}
-                    onChange={(e) =>
-                        setForm({ ...form, description: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
                 <input
                     type="number"
                     placeholder="Harga"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                     value={form.price || ""}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     required
@@ -150,7 +142,7 @@ export default function EditFoodPage() {
                 <input
                     type="number"
                     placeholder="Stock"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                     value={form.stock || ""}
                     onChange={(e) => setForm({ ...form, stock: e.target.value })}
                     required
@@ -159,17 +151,18 @@ export default function EditFoodPage() {
                     type="file"
                     accept="image/*"
                     onChange={(e) => setImageFile(e.target.files[0])}
+                    className="text-sm"
                 />
                 {form.image && (
                     <img
                         src={getDriveThumbnail(form.image, "w300-h300")}
                         alt="Preview"
-                        className="w-32 h-32 object-cover rounded mt-2"
+                        className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded mt-2 mx-auto"
                     />
                 )}
                 <button
                     type="submit"
-                    className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600"
+                    className="w-full bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm sm:text-base"
                     disabled={loading}
                 >
                     {loading ? "Menyimpan..." : "Simpan Perubahan"}

@@ -30,8 +30,8 @@ export default function SearchBar({
     };
 
     return (
-        <div className={`mx-4 mt-2 mb-4 ${className}`}>
-            <div className="flex items-center bg-white rounded-full shadow p-2 sm:p-3 focus-within:ring-2 focus-within:ring-orange-400">
+        <div className={`mx-2 sm:mx-4 mt-2 mb-4 ${className}`}>
+            <div className="flex items-center bg-white rounded-full shadow p-2 sm:p-3 focus-within:ring-2 focus-within:ring-orange-400 w-full max-w-md mx-auto">
                 <input
                     type="text"
                     placeholder={placeholder}

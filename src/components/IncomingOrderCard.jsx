@@ -63,9 +63,9 @@ export default function IncomingOrderCard() {
     if (orders.length === 0) return <p>Tidak ada pesanan masuk.</p>;
 
     return (
-        <div className="bg-gradient-to-r from-orange-300 to-yellow-200 p-4 rounded-xl shadow-md">
-            <h2 className="text-white text-lg font-semibold mb-2">Pesanan Masuk</h2>
-            <div className="space-y-2">
+        <div className="bg-gradient-to-r from-orange-300 to-yellow-200 p-4 sm:p-6 rounded-xl shadow-md max-w-lg w-full mx-auto">
+            <h2 className="text-white text-lg sm:text-xl font-semibold mb-3">Pesanan Masuk</h2>
+            <div className="space-y-3 sm:space-y-4">
                 {orders.map((order) => {
                     // ✅ Ambil nama item dari array items
                     const itemNames = Array.isArray(order.items)
@@ -75,7 +75,7 @@ export default function IncomingOrderCard() {
                     return (
                         <div
                             key={order.id}
-                            className="bg-white rounded-md p-3 flex items-center justify-between shadow"
+                            className="bg-white rounded-md p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between shadow gap-2 sm:gap-0"
                         >
                             <div className="flex items-center space-x-3">
                                 <div

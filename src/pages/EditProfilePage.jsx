@@ -5,8 +5,8 @@ import { onAuthStateChanged, updateEmail, updatePassword } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Header from "../components/Header";
 
-const WEB_APP_URL =  "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
-
+const WEB_APP_URL =
+    "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
 
 export default function EditProfilePage() {
     const navigate = useNavigate();
@@ -95,61 +95,62 @@ export default function EditProfilePage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400">
             <Header />
-            <div className="bg-white rounded-t-3xl p-6 mt-6">
-                <h2 className="text-lg font-bold mb-4">Edit Profil</h2>
+            <div className="bg-white rounded-t-3xl p-4 sm:p-6 mt-6 max-w-lg mx-auto w-[90%] sm:w-full">
+                <h2 className="text-lg sm:text-xl font-bold mb-4 text-center">Edit Profil</h2>
 
                 {/* Foto Profil */}
                 <div className="flex flex-col items-center mb-4">
                     <img
                         src={imgSrc}
                         alt="Profile"
-                        className="w-24 h-24 rounded-full object-cover mb-2"
+                        className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover mb-3"
                     />
                     <input
                         type="file"
                         accept="image/*"
                         onChange={(e) => setImage(e.target.files[0])}
+                        className="text-sm"
                     />
                 </div>
 
-                {/* Nama */}
-                <div className="mb-3">
-                    <label className="block font-semibold">Nama</label>
-                    <input
-                        type="text"
-                        value={userData.nama}
-                        onChange={(e) => setUserData({ ...userData, nama: e.target.value })}
-                        className="w-full p-2 border rounded-lg"
-                    />
-                </div>
+                {/* Form Input */}
+                <div className="space-y-3">
+                    <div>
+                        <label className="block font-semibold text-sm sm:text-base">Nama</label>
+                        <input
+                            type="text"
+                            value={userData.nama}
+                            onChange={(e) => setUserData({ ...userData, nama: e.target.value })}
+                            className="w-full p-2 border rounded-lg text-sm sm:text-base"
+                        />
+                    </div>
 
-                {/* Email */}
-                <div className="mb-3">
-                    <label className="block font-semibold">Email</label>
-                    <input
-                        type="email"
-                        value={userData.email}
-                        onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-                        className="w-full p-2 border rounded-lg"
-                    />
-                </div>
+                    <div>
+                        <label className="block font-semibold text-sm sm:text-base">Email</label>
+                        <input
+                            type="email"
+                            value={userData.email}
+                            onChange={(e) => setUserData({ ...userData, email: e.target.value })}
+                            className="w-full p-2 border rounded-lg text-sm sm:text-base"
+                        />
+                    </div>
 
-                {/* Password */}
-                <div className="mb-3">
-                    <label className="block font-semibold">Password Baru</label>
-                    <input
-                        type="password"
-                        placeholder="Kosongkan jika tidak diubah"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full p-2 border rounded-lg"
-                    />
+                    <div>
+                        <label className="block font-semibold text-sm sm:text-base">Password Baru</label>
+                        <input
+                            type="password"
+                            placeholder="Kosongkan jika tidak diubah"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full p-2 border rounded-lg text-sm sm:text-base"
+                        />
+                    </div>
                 </div>
 
                 <button
                     onClick={handleSave}
                     disabled={loading}
-                    className="w-full bg-yellow-400 text-black py-3 rounded-full font-semibold hover:bg-yellow-500 transition"
+                    className="w-full bg-yellow-400 text-black py-3 rounded-full font-semibold hover:bg-yellow-500 transition mt-5 text-sm sm:text-base"
                 >
                     {loading ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>

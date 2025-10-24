@@ -12,7 +12,6 @@ export default function Header({ greeting, subtitle }) {
     const navigate = useNavigate();
     const [role, setRole] = useState(null);
 
-    // ✅ ambil role user saat login
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -29,100 +28,58 @@ export default function Header({ greeting, subtitle }) {
     }, []);
 
     const backButtonStyle =
-        "bg-white text-black p-2 rounded-full shadow hover:opacity-90 transition duration-200 focus:outline-none focus:ring-2 focus:ring-white/50";
-
-    const iconImageStyle = "h-6 w-6 object-contain";
+        "bg-white text-black p-2 sm:p-2.5 rounded-full shadow hover:opacity-90 transition duration-200 focus:outline-none focus:ring-2 focus:ring-white/50";
+    const iconImageStyle = "h-5 w-5 sm:h-6 sm:w-6 object-contain";
     const iconButtonStyle =
-        "p-2 rounded-full hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition duration-200";
+        "p-1.5 sm:p-2 rounded-full hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition duration-200";
 
-    // ✅ Header dengan greeting (misalnya halaman Home)
+    // ✅ Header greeting
     if (greeting && subtitle) {
         return (
-            <div className="relative p-4 text-white">
-                {/* icon hanya muncul jika role = pelanggan */}
+            <div className="relative px-4 pt-4 pb-2 sm:px-6 sm:pt-6 text-white max-w-5xl mx-auto w-full">
                 {role === "pelanggan" && (
-                    <div className="absolute top-4 right-4 flex gap-3 sm:gap-4">
-                        {/* Orders */}
-                        <button
-                            onClick={() => navigate("/myOrder")}
-                            className={iconButtonStyle}
-                        >
+                    <div className="absolute top-3 right-4 flex gap-2 sm:gap-4">
+                        <button onClick={() => navigate("/myOrder")} className={iconButtonStyle}>
                             <ClipboardDocumentListIcon className="h-6 w-6 text-white" />
                         </button>
-
-                        {/* Notification */}
                         <button className={iconButtonStyle}>
-                            <img
-                                src="/assets/Bell.svg"
-                                alt="Bell Icon"
-                                className={iconImageStyle}
-                            />
+                            <img src="/assets/Bell.svg" alt="Bell" className={iconImageStyle} />
                         </button>
-
-                        {/* Cart */}
-                        <button
-                            onClick={() => navigate("/cart")}
-                            className={iconButtonStyle}
-                        >
-                            <img
-                                src="/assets/Keranjang.svg"
-                                alt="Cart Icon"
-                                className={iconImageStyle}
-                            />
+                        <button onClick={() => navigate("/cart")} className={iconButtonStyle}>
+                            <img src="/assets/Keranjang.svg" alt="Cart" className={iconImageStyle} />
                         </button>
                     </div>
                 )}
 
-                <br />
-                <h1 className="text-2xl font-bold sm:text-3xl">{greeting}</h1>
-                <h1 className="text-2xl font-bold sm:text-3xl">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{greeting}</h1>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
                     <span className="text-yellow-400">{subtitle}</span>
                 </h1>
             </div>
         );
     }
 
-    // ✅ Header dengan back button
+    // ✅ Header dengan tombol kembali
     return (
-        <div className="p-4 text-white">
-            <div className="container mx-auto flex items-center justify-between max-w-2xl">
-                <button
-                    onClick={() => navigate(-1)}
-                    className={backButtonStyle}
-                >
-                    <ArrowLeftIcon className="h-6 w-6" />
+        <div className="px-4 sm:px-6 py-3 text-white w-full max-w-5xl mx-auto">
+            <div className="flex items-center justify-between">
+                <button onClick={() => navigate(-1)} className={backButtonStyle}>
+                    <ArrowLeftIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>
 
-                {/* icon hanya muncul jika role = pelanggan */}
                 {role === "pelanggan" && (
-                    <div className="flex items-center space-x-3">
-                        {/* Orders */}
+                    <div className="flex items-center space-x-2 sm:space-x-4">
                         <button
                             onClick={() => navigate("/my-orders")}
                             className={iconButtonStyle}
                         >
                             <ClipboardDocumentListIcon className="h-6 w-6 text-orange-600" />
                         </button>
-
-                        {/* Notification */}
                         <button className={iconButtonStyle}>
-                            <img
-                                src="/assets/Bell.svg"
-                                alt="Bell Icon"
-                                className={iconImageStyle}
-                            />
+                            <img src="/assets/Bell.svg" alt="Bell" className={iconImageStyle} />
                         </button>
-
-                        {/* Cart */}
-                        <button
-                            onClick={() => navigate("/cart")}
-                            className={iconButtonStyle}
-                        >
-                            <img
-                                src="/assets/Keranjang.svg"
-                                alt="Cart Icon"
-                                className={iconImageStyle}
-                            />
+                        <button onClick={() => navigate("/cart")} className={iconButtonStyle}>
+                            <img src="/assets/Keranjang.svg" alt="Cart" className={iconImageStyle} />
                         </button>
                     </div>
                 )}

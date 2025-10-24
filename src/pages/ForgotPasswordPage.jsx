@@ -62,9 +62,12 @@ const ForgotPasswordPage = () => {
     if (loading) return <Loader message="Memproses..." />;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 flex items-center justify-center px-4">
-            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-                <h1 className="text-2xl font-bold text-orange-600 text-center mb-6">Lupa Password</h1>
+        <div className="min-h-screen bg-gradient-to-br from-orange-400 via-orange-500 to-yellow-400 flex items-center justify-center px-4">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 hover:shadow-orange-200">
+                <h1 className="text-3xl font-extrabold text-orange-600 text-center mb-6">🔐 Lupa Password</h1>
+                <p className="text-gray-500 text-center text-sm mb-6">
+                    Masukkan data akun kamu untuk mengganti password.
+                </p>
 
                 <form onSubmit={handleReset} className="space-y-4">
                     <input
@@ -72,7 +75,7 @@ const ForgotPasswordPage = () => {
                         placeholder="Nama Lengkap"
                         value={nama}
                         onChange={(e) => setNama(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-400 outline-none transition"
                         required
                     />
                     <input
@@ -80,13 +83,13 @@ const ForgotPasswordPage = () => {
                         placeholder="Email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-400 outline-none transition"
                         required
                     />
                     <select
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-400 outline-none transition"
                         required
                     >
                         <option value="pelanggan">Pelanggan</option>
@@ -95,10 +98,10 @@ const ForgotPasswordPage = () => {
 
                     <input
                         type="password"
-                        placeholder="Password Baru (6 karakter)"
+                        placeholder="Password Baru (6–12 karakter)"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-400 outline-none transition"
                         required
                     />
                     <input
@@ -106,19 +109,26 @@ const ForgotPasswordPage = () => {
                         placeholder="Konfirmasi Password Baru"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-400 outline-none transition"
                         required
                     />
 
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
-                    {success && <p className="text-green-600 text-sm">{success}</p>}
+                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                    {success && <p className="text-green-600 text-sm text-center">{success}</p>}
 
                     <button
                         type="submit"
-                        className="w-full bg-[#FF8C4B] text-white py-3 rounded-xl font-bold text-lg hover:bg-orange-600 transition"
+                        className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold text-lg hover:bg-orange-600 transition transform hover:scale-[1.02]"
                     >
                         Reset Password
                     </button>
+
+                    <p
+                        onClick={() => navigate("/loginpage")}
+                        className="text-center text-sm text-orange-600 mt-3 cursor-pointer hover:underline"
+                    >
+                        Kembali ke Login
+                    </p>
                 </form>
             </div>
         </div>

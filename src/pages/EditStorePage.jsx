@@ -13,20 +13,28 @@ export default function EditStorePage() {
     const [image, setImage] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    const WEB_APP_URL =      "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
+    const WEB_APP_URL =
+        "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
 
     useEffect(() => {
         const fetchData = async () => {
             const uid = auth.currentUser.uid;
             const userRef = doc(db, "users", uid);
             const userSnap = await getDoc(userRef);
-
             if (userSnap.exists()) {
                 setForm(userSnap.data());
             }
         };
         fetchData();
     }, []);
+
+    const toBase64 = (file) =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+        });
 
     const uploadToDrive = async () => {
         const base64 = await toBase64(image);
@@ -43,27 +51,16 @@ export default function EditStorePage() {
         throw new Error("Upload gagal");
     };
 
-    const toBase64 = (file) =>
-        new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-        });
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         try {
             let imageUrl = form.kedaiImage;
-            if (image) {
-                imageUrl = await uploadToDrive();
-            }
+            if (image) imageUrl = await uploadToDrive();
 
             const uid = auth.currentUser.uid;
             const userRef = doc(db, "users", uid);
-
             await updateDoc(userRef, {
                 kedaiName: form.kedaiName,
                 kedaiAlamat: form.kedaiAlamat,
@@ -81,27 +78,29 @@ export default function EditStorePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 ">
+        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400">
             <Header title="Profil Toko" />
-            <form   className="p-4 max-w-md mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4"
-                    onSubmit={handleSubmit}>
+            <form
+                className="p-4 sm:p-6 max-w-lg mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4 sm:mt-8 w-[90%] sm:w-full"
+                onSubmit={handleSubmit}
+            >
                 <input
                     type="text"
                     placeholder="Nama Toko"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                     value={form.kedaiName}
                     onChange={(e) => setForm({ ...form, kedaiName: e.target.value })}
                 />
                 <input
                     type="text"
                     placeholder="Alamat"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                     value={form.kedaiAlamat}
                     onChange={(e) => setForm({ ...form, kedaiAlamat: e.target.value })}
                 />
                 <textarea
                     placeholder="Deskripsi Toko"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                     value={form.kedaiDeskripsi}
                     onChange={(e) => setForm({ ...form, kedaiDeskripsi: e.target.value })}
                 />
@@ -109,10 +108,11 @@ export default function EditStorePage() {
                     type="file"
                     accept="image/*"
                     onChange={(e) => setImage(e.target.files[0])}
+                    className="text-sm"
                 />
                 <button
                     type="submit"
-                    className="bg-orange-500 text-white px-4 py-2 rounded-lg"
+                    className="w-full bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm sm:text-base"
                     disabled={loading}
                 >
                     {loading ? "Menyimpan..." : "Simpan Perubahan"}

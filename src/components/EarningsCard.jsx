@@ -19,7 +19,6 @@ export default function EarningsCard() {
                         const userData = usersSnap.docs[0].data();
                         const ordersRef = collection(db, "order");
 
-                        // 🔑 Utama → pakai ownerId
                         const qById = query(
                             ordersRef,
                             where("ownerId", "==", user.uid),
@@ -27,7 +26,6 @@ export default function EarningsCard() {
                         );
                         let snap = await getDocs(qById);
 
-                        // fallback → pakai ownerName
                         if (snap.empty) {
                             const qByName = query(
                                 ordersRef,
@@ -54,19 +52,22 @@ export default function EarningsCard() {
     }, []);
 
     return (
-        <div className="bg-gradient-to-r from-orange-400 to-yellow-300 p-4 rounded-xl shadow-md">
-            <h2 className="text-white text-lg font-semibold">Pendapatan</h2>
-            <div className="mt-2 flex items-center justify-between">
-                <p className="text-2xl font-bold text-white">
-                    Rp {total.toLocaleString("id-ID")}
-                </p>
+        <div className="bg-gradient-to-r from-orange-400 to-yellow-300 p-4 sm:p-5 rounded-2xl shadow-md w-full max-w-md mx-auto">
+            <div className="flex items-center justify-between">
+                <h2 className="text-white text-base sm:text-lg font-semibold">
+                    Pendapatan
+                </h2>
                 <button
                     onClick={() => navigate("/pendapatan")}
-                    className="text-white text-xl"
+                    className="text-white text-lg sm:text-xl font-bold hover:scale-110 transition"
                 >
                     ➜
                 </button>
             </div>
+
+            <p className="mt-2 text-2xl sm:text-3xl font-bold text-white">
+                Rp {total.toLocaleString("id-ID")}
+            </p>
         </div>
     );
 }

@@ -133,10 +133,10 @@ export default function FoodCard({
         <>
             {/* === Kartu Utama === */}
             <div
-                className="relative bg-white rounded-xl shadow-md p-3 sm:p-4 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+                className="relative bg-white rounded-xl shadow-md p-3 sm:p-4 hover:shadow-lg transition-shadow duration-200 cursor-pointer w-full max-w-[320px] sm:max-w-sm mx-auto"
                 onClick={() => setShowModal(true)}
             >
-                {!status && (
+            {!status && (
                     <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">
                         Habis
                     </span>
@@ -190,9 +190,9 @@ export default function FoodCard({
 
             {/* === Modal Detail === */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white rounded-2xl shadow-lg w-11/12 max-w-md p-5 relative">
-                        {/* Close */}
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-2 sm:p-4">
+                    <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-5 relative overflow-y-auto max-h-[90vh] sm:max-h-[85vh]">
+                    {/* Close */}
                         {/* Close */}
                         <button
                             className="absolute top-4 right-4 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-2 shadow-md"
