@@ -45,7 +45,7 @@ Aplikasi ini mendukung dua peran pengguna utama:
 
 1.  **Clone Repository:**
     ```bash
-    git clone [URL_REPOSITORY_ANDA]
+    git clone https://github.com/Grimarks/MyBusiness.git
     cd MyBusiness
     ```
 
