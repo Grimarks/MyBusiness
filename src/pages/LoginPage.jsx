@@ -28,7 +28,7 @@ const LoginPage = () => {
             console.log("Login successful!");
             navigate("/home");
         } catch (err) {
-            setError("Email atau password salah!");
+            setError("Salah Password / Salah Email");
             console.error("Login failed:", err);
         } finally {
             setLoading(false);
@@ -81,7 +81,11 @@ const LoginPage = () => {
                         </button>
                     </div>
 
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
+                    {error && (
+                        <div className="bg-red-100 text-red-600 text-sm px-3 py-2 rounded-lg border border-red-300 transition-all duration-300">
+                            ⚠️ {error}
+                        </div>
+                    )}
 
                     <button
                         type="submit"

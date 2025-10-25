@@ -23,6 +23,35 @@ const getDriveThumbnail = (url, size = "w200-h200") => {
     return url;
 };
 
+// 🔹 Fungsi pseudo-random agar hasil shuffle stabil dalam 1 hari
+function mulberry32(seed) {
+    let t = seed;
+    return function () {
+        t += 0x6D2B79F5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+// 🔹 Fungsi untuk acak array berdasarkan seed (tanggal)
+const shuffleArrayWithSeed = (array, seed) => {
+    const result = [...array];
+    let random = mulberry32(seed);
+    for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+};
+
+// 🔹 Ambil seed unik tiap hari (misal: 20251024)
+const getDailySeed = () => {
+    const today = new Date();
+    const dateStr = today.toISOString().split("T")[0]; // contoh: "2025-10-24"
+    return parseInt(dateStr.replace(/-/g, ""), 10);
+};
+
 const PilihanPage = () => {
     const [role, setRole] = useState(null);
     const [makananList, setMakananList] = useState([]);
@@ -68,7 +97,7 @@ const PilihanPage = () => {
         fetchFavoriteIds();
     }, []);
 
-    // 🔹 Ambil data makanan (untuk pelanggan)
+    // 🔹 Ambil data makanan dan acak berdasarkan tanggal
     useEffect(() => {
         if (role !== "pelanggan") return;
 
@@ -98,7 +127,11 @@ const PilihanPage = () => {
                         (makanan.description || "").toLowerCase().includes(searchTerm.toLowerCase())
                 );
 
-                setMakananList(filteredData);
+                // 🔹 Shuffle berdasarkan tanggal (1x24 jam)
+                const seed = getDailySeed();
+                const shuffledData = shuffleArrayWithSeed(filteredData, seed);
+
+                setMakananList(shuffledData);
             } catch (err) {
                 console.error("Error fetching makanan:", err);
                 setError("Gagal memuat data makanan. Coba lagi nanti.");
