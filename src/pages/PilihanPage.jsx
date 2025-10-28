@@ -99,48 +99,50 @@ const PilihanPage = () => {
 
     // 🔹 Ambil data makanan dan acak berdasarkan tanggal
     useEffect(() => {
-        if (role !== "pelanggan") return;
+        if (role === "pelanggan") {
+            const fetchMakanan = async () => {
+                try {
+                    setLoading(true);
+                    setError(null);
 
-        const fetchMakanan = async () => {
-            try {
-                setLoading(true);
-                setError(null);
+                    const makananRef = collection(db, "foods");
+                    let q = makananRef;
 
-                const makananRef = collection(db, "foods");
-                let q = makananRef;
+                    if (filterLocation !== "All") {
+                        q = query(makananRef, where("location", "==", filterLocation));
+                    }
 
-                if (filterLocation !== "All") {
-                    q = query(makananRef, where("location", "==", filterLocation));
+                    const snapshot = await getDocs(q);
+                    const allData = snapshot.docs.map((doc) => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        image: getDriveThumbnail(doc.data().image) || "/default-food.png",
+                    }));
+
+                    const filteredData = allData.filter(
+                        (makanan) =>
+                            searchTerm === "" ||
+                            (makanan.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (makanan.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+
+                    const seed = getDailySeed();
+                    const shuffledData = shuffleArrayWithSeed(filteredData, seed);
+
+                    setMakananList(shuffledData);
+                } catch (err) {
+                    console.error("Error fetching makanan:", err);
+                    setError("Gagal memuat data makanan. Coba lagi nanti.");
+                } finally {
+                    setLoading(false);
                 }
+            };
 
-                const snapshot = await getDocs(q);
-                const allData = snapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    image: getDriveThumbnail(doc.data().image) || "/default-food.png",
-                }));
-
-                const filteredData = allData.filter(
-                    (makanan) =>
-                        searchTerm === "" ||
-                        (makanan.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        (makanan.description || "").toLowerCase().includes(searchTerm.toLowerCase())
-                );
-
-                // 🔹 Shuffle berdasarkan tanggal (1x24 jam)
-                const seed = getDailySeed();
-                const shuffledData = shuffleArrayWithSeed(filteredData, seed);
-
-                setMakananList(shuffledData);
-            } catch (err) {
-                console.error("Error fetching makanan:", err);
-                setError("Gagal memuat data makanan. Coba lagi nanti.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchMakanan();
+            fetchMakanan();
+        } else if (role) {
+            // Jika role bukan pelanggan (misal: pemilik), matikan loading
+            setLoading(false);
+        }
     }, [role, filterLocation, searchTerm]);
 
     if (loading) return <Loader message="Memuat pilihan makanan..." />;
