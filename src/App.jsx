@@ -49,8 +49,8 @@ function App() {
                 <Route path="/forgot-password" element={<ForgotPasswordPage/>} />
                 <Route path="/myOrder" element={<MyOrdersPage/>} />
                 <Route path="/edit-profile" element={<EditProfilePage/>} />
-                <Route path="/admin" element={<AdminPage />} />
-                <Route path="/admin-login" element={<AdminLoginPage />} />
+                <Route path="/admin" element={<AdminLoginPage />} />
+                <Route path="/admin-page" element={<AdminPage />} />
             </Routes>
         </Router>
 

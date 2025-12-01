@@ -7,19 +7,17 @@ import {
     deleteDoc,
     doc,
     updateDoc,
-    query,
-    where,
-    getDoc // ✅ TAMBAHKAN INI (Penting!)
+    getDoc
 } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
-import Header from "../components/Header";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import Loader from "../components/Loader";
 import {
     TrashIcon,
     PencilSquareIcon,
     UserGroupIcon,
     ShoppingBagIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    ArrowRightOnRectangleIcon
 } from "@heroicons/react/24/outline";
 
 const AdminPage = () => {
@@ -30,59 +28,39 @@ const AdminPage = () => {
     const [stats, setStats] = useState({ totalUsers: 0, totalFoods: 0, totalOrders: 0 });
     const navigate = useNavigate();
 
-    // 🛡️ Cek Akses Admin
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (!user) {
-                navigate("/loginpage"); // Redirect jika tidak login
+                navigate("/admin");
                 return;
             }
-
             try {
-                // 🔍 Cek dokumen user berdasarkan UID untuk memastikan role admin
                 const docRef = doc(db, "users", user.uid);
-                const docSnap = await getDoc(docRef); // ✅ Sekarang getDoc sudah didefinisikan
+                const docSnap = await getDoc(docRef);
 
-                if (!docSnap.exists()) {
-                    alert("Data pengguna tidak ditemukan.");
-                    navigate("/loginpage");
-                    return;
-                }
-
-                const userData = docSnap.data();
-
-                // 🚫 Tendang jika bukan admin
-                if (userData.role !== "admin") {
+                if (!docSnap.exists() || docSnap.data().role !== "admin") {
                     alert("Akses Ditolak! Anda bukan Admin.");
                     navigate("/home");
                     return;
                 }
-
-                // ✅ Jika admin, muat data
                 fetchData();
             } catch (err) {
-                console.error("Gagal verifikasi admin:", err);
-                alert("Terjadi kesalahan saat memuat profil admin.");
+                console.error(err);
+                navigate("/admin");
             }
         });
-
         return () => unsubscribe();
     }, [navigate]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Ambil Users
             const usersSnap = await getDocs(collection(db, "users"));
-            const usersList = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setUsers(usersList);
+            setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-            // Ambil Foods
             const foodsSnap = await getDocs(collection(db, "foods"));
-            const foodsList = foodsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setFoods(foodsList);
+            setFoods(foodsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-            // Ambil Orders untuk Statistik
             const ordersSnap = await getDocs(collection(db, "order"));
 
             setStats({
@@ -90,167 +68,140 @@ const AdminPage = () => {
                 totalFoods: foodsSnap.size,
                 totalOrders: ordersSnap.size
             });
-
         } catch (error) {
-            console.error("Error fetching data:", error);
+            console.error(error);
         } finally {
             setLoading(false);
         }
     };
 
-    // 🗑️ Hapus User
+    const handleLogout = async () => {
+        await signOut(auth);
+        navigate("/admin");
+    };
+
     const handleDeleteUser = async (id) => {
-        if (window.confirm("Yakin ingin menghapus user ini?")) {
-            try {
-                await deleteDoc(doc(db, "users", id));
-                setUsers(users.filter(user => user.id !== id));
-            } catch (error) {
-                console.error("Gagal menghapus user:", error);
-                alert("Gagal menghapus user.");
-            }
+        if (window.confirm("Hapus user ini?")) {
+            await deleteDoc(doc(db, "users", id));
+            setUsers(users.filter(u => u.id !== id));
         }
     };
 
-    // ✏️ Ubah Role User
     const handleChangeRole = async (id, currentRole) => {
-        const newRole = prompt("Masukkan role baru (admin/pemilik/pelanggan):", currentRole);
+        const newRole = prompt("Role baru (admin/pemilik/pelanggan):", currentRole);
         if (newRole && ["admin", "pemilik", "pelanggan"].includes(newRole)) {
-            try {
-                await updateDoc(doc(db, "users", id), { role: newRole });
-                setUsers(users.map(u => u.id === id ? { ...u, role: newRole } : u));
-            } catch (error) {
-                console.error("Gagal update role:", error);
-                alert("Gagal mengubah role.");
-            }
-        } else if (newRole) {
-            alert("Role tidak valid! Gunakan: admin, pemilik, atau pelanggan.");
+            await updateDoc(doc(db, "users", id), { role: newRole });
+            setUsers(users.map(u => u.id === id ? { ...u, role: newRole } : u));
         }
     };
 
-    // 🗑️ Hapus Makanan
     const handleDeleteFood = async (id) => {
-        if (window.confirm("Hapus makanan ini dari database?")) {
-            try {
-                await deleteDoc(doc(db, "foods", id));
-                setFoods(foods.filter(food => food.id !== id));
-            } catch (error) {
-                console.error("Gagal menghapus makanan:", error);
-                alert("Gagal menghapus makanan.");
-            }
+        if (window.confirm("Hapus makanan ini?")) {
+            await deleteDoc(doc(db, "foods", id));
+            setFoods(foods.filter(f => f.id !== id));
         }
     };
 
-    // ✏️ Edit Stok Makanan (Simpel)
     const handleEditFoodStock = async (id, currentStock) => {
         const newStock = prompt("Update stok:", currentStock);
-        if (newStock !== null) {
-            try {
-                const stockValue = parseInt(newStock);
-                if (isNaN(stockValue)) return alert("Stok harus berupa angka!");
-
-                await updateDoc(doc(db, "foods", id), { stock: stockValue });
-                setFoods(foods.map(f => f.id === id ? { ...f, stock: stockValue } : f));
-            } catch (error) {
-                console.error("Gagal update stok:", error);
-                alert("Gagal mengubah stok.");
-            }
+        if (newStock !== null && !isNaN(newStock)) {
+            await updateDoc(doc(db, "foods", id), { stock: parseInt(newStock) });
+            setFoods(foods.map(f => f.id === id ? { ...f, stock: parseInt(newStock) } : f));
         }
     };
 
-    if (loading) return <Loader message="Memuat Data Admin..." />;
+    if (loading) return <Loader message="Memuat Dashboard Admin..." />;
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col">
-            <div className="bg-gradient-to-r from-gray-800 to-gray-900 shadow-lg">
-                <Header greeting="Admin Panel" subtitle="Kelola Aplikasi" />
-            </div>
+        <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+            <header className="bg-gradient-to-r from-orange-500 to-yellow-400 text-white px-6 py-4 shadow-lg flex justify-between items-center sticky top-0 z-50">
+                <div>
+                    <h1 className="text-2xl font-bold">Admin Panel</h1>
+                    <p className="text-white/80 text-sm">Kelola MyBusiness</p>
+                </div>
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full transition text-sm font-semibold backdrop-blur-sm"
+                >
+                    <ArrowRightOnRectangleIcon className="w-5 h-5" /> Logout
+                </button>
+            </header>
 
-            <div className="flex flex-1 flex-col md:flex-row h-[calc(100vh-80px)]">
-                {/* Sidebar */}
-                <aside className="bg-white w-full md:w-64 p-4 shadow-md flex md:flex-col gap-2 overflow-x-auto flex-shrink-0">
-                    <button
-                        onClick={() => setActiveTab("dashboard")}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-orange-500 text-white shadow-orange-200' : 'text-gray-600 hover:bg-gray-100'}`}
-                    >
-                        <ChartBarIcon className="w-5 h-5" /> Dashboard
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("users")}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium whitespace-nowrap ${activeTab === 'users' ? 'bg-orange-500 text-white shadow-orange-200' : 'text-gray-600 hover:bg-gray-100'}`}
-                    >
-                        <UserGroupIcon className="w-5 h-5" /> Users
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("foods")}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium whitespace-nowrap ${activeTab === 'foods' ? 'bg-orange-500 text-white shadow-orange-200' : 'text-gray-600 hover:bg-gray-100'}`}
-                    >
-                        <ShoppingBagIcon className="w-5 h-5" /> Foods
-                    </button>
+            <div className="flex flex-1 flex-col md:flex-row max-w-7xl mx-auto w-full mt-6 px-4 pb-10 gap-6">
+                <aside className="w-full md:w-64 flex flex-col gap-2">
+                    {[
+                        { id: "dashboard", label: "Dashboard", icon: ChartBarIcon },
+                        { id: "users", label: "Pengguna", icon: UserGroupIcon },
+                        { id: "foods", label: "Makanan", icon: ShoppingBagIcon },
+                    ].map((item) => (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id)}
+                            className={`flex items-center gap-3 px-5 py-3 rounded-xl transition-all font-semibold ${
+                                activeTab === item.id
+                                    ? "bg-white text-orange-500 shadow-md border-l-4 border-orange-500"
+                                    : "text-gray-500 hover:bg-white hover:text-orange-400"
+                            }`}
+                        >
+                            <item.icon className="w-6 h-6" /> {item.label}
+                        </button>
+                    ))}
                 </aside>
-
-                {/* Main Content */}
-                <main className="flex-1 p-6 overflow-y-auto">
-
-                    {/* === DASHBOARD === */}
+                <main className="flex-1">
                     {activeTab === "dashboard" && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
-                                <h3 className="text-gray-500 text-sm font-bold uppercase">Total Users</h3>
-                                <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalUsers}</p>
-                            </div>
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-green-500">
-                                <h3 className="text-gray-500 text-sm font-bold uppercase">Total Makanan</h3>
-                                <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalFoods}</p>
-                            </div>
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-500">
-                                <h3 className="text-gray-500 text-sm font-bold uppercase">Total Pesanan</h3>
-                                <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalOrders}</p>
-                            </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-fade-in">
+                            <StatsCard
+                                title="Total Pengguna"
+                                count={stats.totalUsers}
+                                icon={<UserGroupIcon className="w-8 h-8 text-white" />}
+                                color="bg-gradient-to-br from-blue-400 to-blue-600"
+                            />
+                            <StatsCard
+                                title="Total Makanan"
+                                count={stats.totalFoods}
+                                icon={<ShoppingBagIcon className="w-8 h-8 text-white" />}
+                                color="bg-gradient-to-br from-green-400 to-green-600"
+                            />
+                            <StatsCard
+                                title="Total Pesanan"
+                                count={stats.totalOrders}
+                                icon={<ChartBarIcon className="w-8 h-8 text-white" />}
+                                color="bg-gradient-to-br from-orange-400 to-orange-600"
+                            />
                         </div>
                     )}
-
-                    {/* === USERS MANAGEMENT === */}
                     {activeTab === "users" && (
-                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                            <div className="p-4 border-b bg-gray-50">
+                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 animate-fade-in">
+                            <div className="p-5 border-b bg-gray-50">
                                 <h2 className="font-bold text-lg text-gray-700">Daftar Pengguna</h2>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
-                                    <thead>
-                                    <tr className="bg-gray-100 text-gray-600 text-sm uppercase">
-                                        <th className="p-4 whitespace-nowrap">Nama</th>
-                                        <th className="p-4 whitespace-nowrap">Email</th>
-                                        <th className="p-4 whitespace-nowrap">Role</th>
-                                        <th className="p-4 text-center whitespace-nowrap">Aksi</th>
+                                    <thead className="bg-orange-50 text-orange-600 text-xs uppercase font-bold tracking-wider">
+                                    <tr>
+                                        <th className="p-4">Nama</th>
+                                        <th className="p-4">Email</th>
+                                        <th className="p-4 text-center">Role</th>
+                                        <th className="p-4 text-center">Aksi</th>
                                     </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-200">
+                                    <tbody className="divide-y divide-gray-100 text-sm">
                                     {users.map(user => (
                                         <tr key={user.id} className="hover:bg-gray-50 transition">
-                                            <td className="p-4 font-medium text-gray-800 whitespace-nowrap">{user.nama || "Tanpa Nama"}</td>
-                                            <td className="p-4 text-gray-600 whitespace-nowrap">{user.email}</td>
-                                            <td className="p-4 whitespace-nowrap">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold 
-                                                        ${user.role === 'admin' ? 'bg-red-100 text-red-600' :
-                                                        user.role === 'pemilik' ? 'bg-blue-100 text-blue-600' :
-                                                            'bg-green-100 text-green-600'}`}>
+                                            <td className="p-4 font-semibold text-gray-800">{user.nama || "Tanpa Nama"}</td>
+                                            <td className="p-4 text-gray-500">{user.email}</td>
+                                            <td className="p-4 text-center">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                                        user.role === 'admin' ? 'bg-red-100 text-red-600' :
+                                                            user.role === 'pemilik' ? 'bg-blue-100 text-blue-600' :
+                                                                'bg-green-100 text-green-600'
+                                                    }`}>
                                                         {user.role}
                                                     </span>
                                             </td>
-                                            <td className="p-4 flex justify-center gap-3 whitespace-nowrap">
-                                                <button
-                                                    onClick={() => handleChangeRole(user.id, user.role)}
-                                                    className="text-blue-500 hover:bg-blue-50 p-2 rounded-full"
-                                                    title="Ubah Role">
-                                                    <PencilSquareIcon className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteUser(user.id)}
-                                                    className="text-red-500 hover:bg-red-50 p-2 rounded-full"
-                                                    title="Hapus User">
-                                                    <TrashIcon className="w-5 h-5" />
-                                                </button>
+                                            <td className="p-4 flex justify-center gap-2">
+                                                <ActionButton onClick={() => handleChangeRole(user.id, user.role)} icon={PencilSquareIcon} color="text-blue-500 bg-blue-50" />
+                                                <ActionButton onClick={() => handleDeleteUser(user.id)} icon={TrashIcon} color="text-red-500 bg-red-50" />
                                             </td>
                                         </tr>
                                     ))}
@@ -259,44 +210,38 @@ const AdminPage = () => {
                             </div>
                         </div>
                     )}
-
-                    {/* === FOODS MANAGEMENT === */}
                     {activeTab === "foods" && (
-                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                            <div className="p-4 border-b bg-gray-50">
+                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 animate-fade-in">
+                            <div className="p-5 border-b bg-gray-50">
                                 <h2 className="font-bold text-lg text-gray-700">Daftar Makanan</h2>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
-                                    <thead>
-                                    <tr className="bg-gray-100 text-gray-600 text-sm uppercase">
-                                        <th className="p-4 whitespace-nowrap">Nama</th>
-                                        <th className="p-4 whitespace-nowrap">Kategori</th>
-                                        <th className="p-4 whitespace-nowrap">Harga</th>
-                                        <th className="p-4 whitespace-nowrap">Stok</th>
-                                        <th className="p-4 text-center whitespace-nowrap">Aksi</th>
+                                    <thead className="bg-orange-50 text-orange-600 text-xs uppercase font-bold tracking-wider">
+                                    <tr>
+                                        <th className="p-4">Nama Menu</th>
+                                        <th className="p-4">Kategori</th>
+                                        <th className="p-4">Harga</th>
+                                        <th className="p-4 text-center">Stok</th>
+                                        <th className="p-4 text-center">Aksi</th>
                                     </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-200">
+                                    <tbody className="divide-y divide-gray-100 text-sm">
                                     {foods.map(food => (
                                         <tr key={food.id} className="hover:bg-gray-50 transition">
-                                            <td className="p-4 font-medium text-gray-800 whitespace-nowrap">{food.name}</td>
-                                            <td className="p-4 text-gray-600 whitespace-nowrap">{food.category}</td>
-                                            <td className="p-4 text-gray-600 whitespace-nowrap">Rp {food.price?.toLocaleString()}</td>
-                                            <td className="p-4 text-gray-600 whitespace-nowrap">{food.stock}</td>
-                                            <td className="p-4 flex justify-center gap-3 whitespace-nowrap">
-                                                <button
-                                                    onClick={() => handleEditFoodStock(food.id, food.stock)}
-                                                    className="text-blue-500 hover:bg-blue-50 p-2 rounded-full"
-                                                    title="Edit Stok">
-                                                    <PencilSquareIcon className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteFood(food.id)}
-                                                    className="text-red-500 hover:bg-red-50 p-2 rounded-full"
-                                                    title="Hapus Makanan">
-                                                    <TrashIcon className="w-5 h-5" />
-                                                </button>
+                                            <td className="p-4 font-semibold text-gray-800">{food.name}</td>
+                                            <td className="p-4 text-gray-500">
+                                                <span className="bg-gray-100 px-2 py-1 rounded text-xs">{food.category}</span>
+                                            </td>
+                                            <td className="p-4 text-orange-600 font-bold">Rp {food.price?.toLocaleString()}</td>
+                                            <td className="p-4 text-center">
+                                                    <span className={`px-2 py-1 rounded font-bold text-xs ${food.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {food.stock}
+                                                    </span>
+                                            </td>
+                                            <td className="p-4 flex justify-center gap-2">
+                                                <ActionButton onClick={() => handleEditFoodStock(food.id, food.stock)} icon={PencilSquareIcon} color="text-blue-500 bg-blue-50" />
+                                                <ActionButton onClick={() => handleDeleteFood(food.id)} icon={TrashIcon} color="text-red-500 bg-red-50" />
                                             </td>
                                         </tr>
                                     ))}
@@ -305,11 +250,31 @@ const AdminPage = () => {
                             </div>
                         </div>
                     )}
-
                 </main>
             </div>
         </div>
     );
 };
+
+const StatsCard = ({ title, count, icon, color }) => (
+    <div className={`p-6 rounded-2xl shadow-lg text-white flex items-center justify-between ${color} transform hover:scale-105 transition-transform`}>
+        <div>
+            <p className="text-white/80 text-sm font-medium uppercase tracking-wide">{title}</p>
+            <p className="text-4xl font-bold mt-1">{count}</p>
+        </div>
+        <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+            {icon}
+        </div>
+    </div>
+);
+
+const ActionButton = ({ onClick, icon: Icon, color }) => (
+    <button
+        onClick={onClick}
+        className={`p-2 rounded-lg transition hover:brightness-90 ${color}`}
+    >
+        <Icon className="w-5 h-5" />
+    </button>
+);
 
 export default AdminPage;
