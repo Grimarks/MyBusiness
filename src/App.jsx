@@ -21,6 +21,8 @@ import OrderDetailPage from "./pages/OrderDetailPage.jsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 import MyOrdersPage from "./pages/MyOrdersPage.jsx";
 import EditProfilePage from "./pages/EditProfilePage.jsx";
+import AdminPage from "./pages/AdminPage.jsx";
+import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 function App() {
     return (
         <Router>
@@ -47,6 +49,8 @@ function App() {
                 <Route path="/forgot-password" element={<ForgotPasswordPage/>} />
                 <Route path="/myOrder" element={<MyOrdersPage/>} />
                 <Route path="/edit-profile" element={<EditProfilePage/>} />
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/admin-login" element={<AdminLoginPage />} />
             </Routes>
         </Router>
 
