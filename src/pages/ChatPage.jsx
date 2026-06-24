@@ -3,76 +3,59 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db, auth } from "../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import BottomNav from "../components/BottomNav";
-import Header from "../components/Header.jsx";
-import SearchBar from "../components/SearchBar.jsx";
+import Header from "../components/Header";
+import SearchBar from "../components/SearchBar";
 
-// Format tanggal & waktu
 const formatDate = (date) => {
-    const now = new Date();
-    const d = new Date(date);
+    const now  = new Date();
+    const d    = new Date(date);
+    const diff = now - d;
 
-    const sameDay =
+    const isToday =
         d.getDate() === now.getDate() &&
         d.getMonth() === now.getMonth() &&
         d.getFullYear() === now.getFullYear();
 
-    const yesterday = new Date();
+    const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const isYesterday =
         d.getDate() === yesterday.getDate() &&
         d.getMonth() === yesterday.getMonth() &&
         d.getFullYear() === yesterday.getFullYear();
 
-    if (sameDay) {
-        return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-    } else if (isYesterday) {
-        return "Kemarin";
-    } else if (now - d < 7 * 24 * 60 * 60 * 1000) {
-        return d.toLocaleDateString("id-ID", { weekday: "long" });
-    } else {
-        return d.toLocaleDateString("id-ID");
-    }
+    if (isToday)     return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    if (isYesterday) return "Kemarin";
+    if (diff < 7 * 24 * 60 * 60 * 1000) return d.toLocaleDateString("id-ID", { weekday: "long" });
+    return d.toLocaleDateString("id-ID");
 };
 
 export default function ChatPage() {
-    const [chats, setChats] = useState([]);
+    const [chats, setChats]     = useState([]);
     const [loading, setLoading] = useState(true);
-    const [role, setRole] = useState(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // Ambil role dari collection users
-                const usersSnap = await getDocs(
-                    query(collection(db, "users"), where("uid", "==", user.uid))
-                );
-                if (!usersSnap.empty) {
-                    const userData = usersSnap.docs[0].data();
-                    setRole(userData.role);
+            if (!user) return;
+            const usersSnap = await getDocs(
+                query(collection(db, "users"), where("uid", "==", user.uid))
+            );
+            if (usersSnap.empty) return;
 
-                    try {
-                        const chatRef = collection(db, "dummyChats");
-                        const snapshot = await getDocs(chatRef);
-                        let data = snapshot.docs.map((doc) => ({
-                            id: doc.id,
-                            ...doc.data(),
-                        }));
+            const { role } = usersSnap.docs[0].data();
+            try {
+                const snapshot = await getDocs(collection(db, "dummyChats"));
+                let data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-                        // Filter sesuai role
-                        if (userData.role === "pemilik") {
-                            data = data.filter((c) => c.name.startsWith("Cust"));
-                        } else {
-                            data = data.filter((c) => !c.name.startsWith("Cust"));
-                        }
+                data = role === "pemilik"
+                    ? data.filter((c) => c.name.startsWith("Cust"))
+                    : data.filter((c) => !c.name.startsWith("Cust"));
 
-                        data.sort((a, b) => new Date(b.time) - new Date(a.time));
-                        setChats(data);
-                    } catch (error) {
-                        console.error("Gagal mengambil data chat:", error);
-                    } finally {
-                        setLoading(false);
-                    }
-                }
+                data.sort((a, b) => new Date(b.time) - new Date(a.time));
+                setChats(data);
+            } catch (error) {
+                console.error("Gagal mengambil data chat:", error);
+            } finally {
+                setLoading(false);
             }
         });
 

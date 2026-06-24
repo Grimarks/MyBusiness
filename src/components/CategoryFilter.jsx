@@ -1,36 +1,37 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
 
-const CategoryFilter = ({
-                            filterLocation,
-                            setFilterLocation,
-                            filterFoodCategory,
-                            setFilterFoodCategory,
-                        }) => {
-    const location = useLocation();
-    const currentPath = location.pathname;
+const LOCATION_FILTER_PATHS = ["/pilihan", "/favorite"];
 
-    const foodCategories = [
-        "All",
-        "Cepat Saji",
-        "Ayam Geprek",
-        "Mie",
-        "Sayuran",
-        "Steak",
-        "Jamur",
-        "Kopi",
-    ];
+const FOOD_CATEGORIES = [
+    "All",
+    "Cepat Saji",
+    "Ayam Geprek",
+    "Mie",
+    "Sayuran",
+    "Steak",
+    "Jamur",
+    "Kopi",
+];
 
-    const isLocationFilterPage =
-        currentPath === "/pilihan" || currentPath === "/favorite";
+const LOCATIONS = ["All", "Bukit", "Indralaya"];
 
-    const commonContainer =
-        "flex gap-2 px-3 sm:px-6 py-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent";
+const containerClass =
+    "flex gap-2 px-3 sm:px-6 py-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent";
+
+export default function CategoryFilter({
+    filterLocation,
+    setFilterLocation,
+    filterFoodCategory,
+    setFilterFoodCategory,
+}) {
+    const { pathname } = useLocation();
+    const isLocationFilterPage = LOCATION_FILTER_PATHS.includes(pathname);
 
     if (isLocationFilterPage) {
         return (
-            <div className={commonContainer}>
-                {["All", "Bukit", "Indralaya"].map((loc) => (
+            <div className={containerClass}>
+                {LOCATIONS.map((loc) => (
                     <button
                         key={loc}
                         onClick={() => setFilterLocation(loc)}
@@ -48,8 +49,8 @@ const CategoryFilter = ({
     }
 
     return (
-        <div className={commonContainer}>
-            {foodCategories.map((category) => (
+        <div className={containerClass}>
+            {FOOD_CATEGORIES.map((category) => (
                 <button
                     key={category}
                     onClick={() => setFilterFoodCategory(category)}
@@ -64,6 +65,4 @@ const CategoryFilter = ({
             ))}
         </div>
     );
-};
-
-export default CategoryFilter;
+}

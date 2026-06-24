@@ -1,36 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Header from "../components/Header.jsx";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-
-// === Helpers ===
-const getDriveThumbnail = (url, size = "w200-h200") => {
-    if (!url) return "/default-food.png";
-
-    const ucMatch = url.match(/id=([^&]+)/);
-    if (ucMatch)
-        return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
-
-    const dMatch = url.match(/\/d\/([^/]+)\//);
-    if (dMatch)
-        return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
-
-    return url;
-};
+import { getDriveThumbnail } from "../utils/drive";
+import Header from "../components/Header";
 
 export default function OrderDetailPage() {
-    const location = useLocation();
-    const navigate = useNavigate();
+    const location  = useLocation();
+    const navigate  = useNavigate();
     const [order, setOrder] = useState(null);
 
-    // ✅ Ambil data dari state (dikirim dari IncomingOrderCard)
     useEffect(() => {
-        if (location.state) {
-            setOrder(location.state);
-        } else {
-            console.error("⚠️ Data order tidak ditemukan");
-        }
+        if (location.state) setOrder(location.state);
+        else console.error("Data order tidak ditemukan");
     }, [location.state]);
 
     const handleComplete = async () => {
@@ -39,10 +21,9 @@ export default function OrderDetailPage() {
             return;
         }
         try {
-            const orderRef = doc(db, "order", order.id);
-            await updateDoc(orderRef, { status: true }); // update ke Firestore
+            await updateDoc(doc(db, "order", order.id), { status: true });
             alert("Pesanan selesai!");
-            navigate(-1); // kembali
+            navigate(-1);
         } catch (err) {
             console.error("Gagal update pesanan:", err);
             alert("Gagal menyelesaikan pesanan.");
@@ -60,14 +41,11 @@ export default function OrderDetailPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
             <Header
-                title={
-                    order.customerName ? `Cust ${order.customerName}` : "Detail Pesanan"
-                }
+                title={order.customerName ? `Cust ${order.customerName}` : "Detail Pesanan"}
             />
             <div className="p-4 max-w-md mx-auto bg-white rounded-2xl shadow-md mt-4 space-y-4">
                 <h2 className="text-xl font-bold">Pesanan:</h2>
 
-                {/* ✅ Render detail items */}
                 {Array.isArray(order.items) && order.items.length > 0 ? (
                     order.items.map((item, idx) => (
                         <div
@@ -99,7 +77,6 @@ export default function OrderDetailPage() {
                     <p>Tidak ada detail item.</p>
                 )}
 
-                {/* ✅ Total pembayaran */}
                 <div className="flex justify-between items-center border-t pt-3">
                     <p className="font-semibold">Total Pembayaran</p>
                     <p className="text-lg font-bold text-orange-600">
@@ -107,7 +84,6 @@ export default function OrderDetailPage() {
                     </p>
                 </div>
 
-                {/* ✅ Tombol pesanan selesai */}
                 {!order.status && (
                     <button
                         onClick={handleComplete}

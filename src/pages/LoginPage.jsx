@@ -1,17 +1,17 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import Loader from "../components/Loader";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import Loader from "../components/Loader";
 
-const LoginPage = () => {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+export default function LoginPage() {
+    const [email, setEmail]               = useState("");
+    const [password, setPassword]         = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [error, setError]               = useState("");
+    const [loading, setLoading]           = useState(false);
     const navigate = useNavigate();
-    const auth = getAuth();
+    const auth     = getAuth();
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -25,7 +25,6 @@ const LoginPage = () => {
         setLoading(true);
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            console.log("Login successful!");
             navigate("/home");
         } catch (err) {
             setError("Salah Password / Salah Email");
@@ -35,9 +34,7 @@ const LoginPage = () => {
         }
     };
 
-    if (loading) {
-        return <Loader message="Sedang memproses..." />;
-    }
+    if (loading) return <Loader message="Sedang memproses..." />;
 
     return (
         <div className="min-h-screen font-sans bg-gradient-to-br from-orange-500 to-yellow-400 flex flex-col">
@@ -50,7 +47,6 @@ const LoginPage = () => {
                 <form onSubmit={handleLogin} className="flex flex-col px-6 space-y-6">
                     <h2 className="text-3xl font-bold text-orange-600">Masuk</h2>
 
-                    {/* Email */}
                     <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl">
                         <input
                             type="email"
@@ -62,7 +58,6 @@ const LoginPage = () => {
                         />
                     </div>
 
-                    {/* Password + Toggle Eye */}
                     <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
                         <input
                             type={showPassword ? "text" : "password"}
@@ -77,7 +72,11 @@ const LoginPage = () => {
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-3 text-gray-500"
                         >
-                            {showPassword ? <EyeSlashIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                            {showPassword ? (
+                                <EyeSlashIcon className="w-5 h-5" />
+                            ) : (
+                                <EyeIcon className="w-5 h-5" />
+                            )}
                         </button>
                     </div>
 
@@ -95,7 +94,6 @@ const LoginPage = () => {
                     </button>
                 </form>
 
-                {/* Lupa Password */}
                 <div className="text-center text-sm mt-4">
                     <Link to="/forgot-password">
                         <span className="text-orange-600 font-semibold cursor-pointer hover:underline">
@@ -107,12 +105,12 @@ const LoginPage = () => {
                 <div className="text-center text-sm mt-6">
                     Belum punya akun?{" "}
                     <Link to="/select-account">
-                        <span className="font-bold text-black cursor-pointer hover:underline">Daftar di sini</span>
+                        <span className="font-bold text-black cursor-pointer hover:underline">
+                            Daftar di sini
+                        </span>
                     </Link>
                 </div>
             </div>
         </div>
     );
-};
-
-export default LoginPage;
+}

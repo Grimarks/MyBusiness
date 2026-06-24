@@ -2,31 +2,28 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, db } from "../firebaseConfig";
-import Loader from "../components/Loader";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import Loader from "../components/Loader";
 
-const RegisterPelangganPage = () => {
-    const [nama, setNama] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+export default function RegisterPelangganPage() {
+    const [nama, setNama]                   = useState("");
+    const [email, setEmail]                 = useState("");
+    const [password, setPassword]           = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword]   = useState(false);
+    const [error, setError]                 = useState("");
+    const [loading, setLoading]             = useState(false);
     const navigate = useNavigate();
-    const auth = getAuth();
+    const auth     = getAuth();
 
     const handleRegister = async (e) => {
         e.preventDefault();
         setError("");
 
-        // 🔹 Validasi panjang password
         if (password.length < 6 || password.length > 12) {
             setError("Password harus terdiri dari 6 hingga 12 karakter!");
             return;
         }
-
-        // 🔹 Validasi konfirmasi password
         if (password !== confirmPassword) {
             setError("Password dan Konfirmasi Password tidak sama!");
             return;
@@ -34,22 +31,17 @@ const RegisterPelangganPage = () => {
 
         setLoading(true);
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-
-            if (user) {
-                await setDoc(doc(db, "users", user.uid), {
-                    nama,
-                    email,
-                    role: "pelanggan",
-                    uid: user.uid,
-                    password, // hanya untuk testing — hapus di production!
-                });
-                alert("Registrasi berhasil!");
-                navigate("/loginpage");
-            }
+            const { user } = await createUserWithEmailAndPassword(auth, email, password);
+            await setDoc(doc(db, "users", user.uid), {
+                nama,
+                email,
+                role: "pelanggan",
+                uid: user.uid,
+                password,
+            });
+            alert("Registrasi berhasil!");
+            navigate("/loginpage");
         } catch (err) {
-            // Firebase error handling
             if (err.code === "auth/email-already-in-use") {
                 setError("Email sudah terdaftar. Silakan gunakan email lain!");
             } else if (err.code === "auth/invalid-email") {
@@ -65,9 +57,7 @@ const RegisterPelangganPage = () => {
         }
     };
 
-    if (loading) {
-        return <Loader message="Sedang mendaftarkan..." />;
-    }
+    if (loading) return <Loader message="Sedang mendaftarkan..." />;
 
     return (
         <div className="min-h-screen font-sans bg-gradient-to-br from-orange-500 to-yellow-400 flex flex-col">
@@ -102,7 +92,6 @@ const RegisterPelangganPage = () => {
                         />
                     </div>
 
-                    {/* Password */}
                     <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
                         <input
                             type={showPassword ? "text" : "password"}
@@ -119,12 +108,15 @@ const RegisterPelangganPage = () => {
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-3 text-gray-500"
                         >
-                            {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                            {showPassword ? (
+                                <EyeSlashIcon className="w-5 h-5" />
+                            ) : (
+                                <EyeIcon className="w-5 h-5" />
+                            )}
                         </button>
                     </div>
 
-                    {/* Confirm Password */}
-                    <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
+                    <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl">
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="Konfirmasi Password"
@@ -156,6 +148,4 @@ const RegisterPelangganPage = () => {
             </div>
         </div>
     );
-};
-
-export default RegisterPelangganPage;
+}

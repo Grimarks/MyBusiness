@@ -1,73 +1,70 @@
 import React, { useEffect, useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
-import Header from "../components/Header.jsx";
+import Header from "../components/Header";
+
+const WEB_APP_URL =
+    "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
+
+const toBase64 = (file) =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload  = () => resolve(reader.result);
+        reader.onerror = reject;
+    });
+
+const uploadToDrive = async (file) => {
+    const base64 = await toBase64(file);
+    const res    = await fetch(WEB_APP_URL, {
+        method: "POST",
+        body: new URLSearchParams({
+            file: base64.split(",")[1],
+            mimeType: file.type,
+            filename: file.name,
+        }),
+    });
+    const result = await res.json();
+    if (result.success) return result.url;
+    throw new Error("Upload gagal");
+};
+
+const INITIAL_FORM = {
+    kedaiName: "",
+    kedaiAlamat: "",
+    kedaiDeskripsi: "",
+    kedaiImage: "",
+};
+
+const inputClass = "w-full p-2 border rounded text-sm sm:text-base";
 
 export default function EditStorePage() {
-    const [form, setForm] = useState({
-        kedaiName: "",
-        kedaiAlamat: "",
-        kedaiDeskripsi: "",
-        kedaiImage: "",
-    });
+    const [form, setForm]   = useState(INITIAL_FORM);
     const [image, setImage] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    const WEB_APP_URL =
-        "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
-
     useEffect(() => {
         const fetchData = async () => {
-            const uid = auth.currentUser.uid;
-            const userRef = doc(db, "users", uid);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-                setForm(userSnap.data());
-            }
+            const uid  = auth.currentUser?.uid;
+            if (!uid) return;
+            const snap = await getDoc(doc(db, "users", uid));
+            if (snap.exists()) setForm(snap.data());
         };
         fetchData();
     }, []);
 
-    const toBase64 = (file) =>
-        new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-        });
-
-    const uploadToDrive = async () => {
-        const base64 = await toBase64(image);
-        const res = await fetch(WEB_APP_URL, {
-            method: "POST",
-            body: new URLSearchParams({
-                file: base64.split(",")[1],
-                mimeType: image.type,
-                filename: image.name,
-            }),
-        });
-        const result = await res.json();
-        if (result.success) return result.url;
-        throw new Error("Upload gagal");
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-
         try {
-            let imageUrl = form.kedaiImage;
-            if (image) imageUrl = await uploadToDrive();
-
-            const uid = auth.currentUser.uid;
-            const userRef = doc(db, "users", uid);
-            await updateDoc(userRef, {
-                kedaiName: form.kedaiName,
-                kedaiAlamat: form.kedaiAlamat,
+            const imageUrl = image ? await uploadToDrive(image) : form.kedaiImage;
+            const uid      = auth.currentUser?.uid;
+            await updateDoc(doc(db, "users", uid), {
+                kedaiName:      form.kedaiName,
+                kedaiAlamat:    form.kedaiAlamat,
                 kedaiDeskripsi: form.kedaiDeskripsi,
-                kedaiImage: imageUrl,
+                kedaiImage:     imageUrl,
             });
-
             alert("Profil toko berhasil diperbarui!");
         } catch (err) {
             console.error(err);
@@ -87,20 +84,20 @@ export default function EditStorePage() {
                 <input
                     type="text"
                     placeholder="Nama Toko"
-                    className="w-full p-2 border rounded text-sm sm:text-base"
+                    className={inputClass}
                     value={form.kedaiName}
                     onChange={(e) => setForm({ ...form, kedaiName: e.target.value })}
                 />
                 <input
                     type="text"
                     placeholder="Alamat"
-                    className="w-full p-2 border rounded text-sm sm:text-base"
+                    className={inputClass}
                     value={form.kedaiAlamat}
                     onChange={(e) => setForm({ ...form, kedaiAlamat: e.target.value })}
                 />
                 <textarea
                     placeholder="Deskripsi Toko"
-                    className="w-full p-2 border rounded text-sm sm:text-base"
+                    className={inputClass}
                     value={form.kedaiDeskripsi}
                     onChange={(e) => setForm({ ...form, kedaiDeskripsi: e.target.value })}
                 />
@@ -112,8 +109,8 @@ export default function EditStorePage() {
                 />
                 <button
                     type="submit"
-                    className="w-full bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm sm:text-base"
                     disabled={loading}
+                    className="w-full bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm sm:text-base"
                 >
                     {loading ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>

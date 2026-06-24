@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import Loader from "../components/Loader";
 
-const ForgotPasswordPage = () => {
-    const [email, setEmail] = useState("");
-    const [error, setError] = useState("");
+export default function ForgotPasswordPage() {
+    const [email, setEmail]     = useState("");
+    const [error, setError]     = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const auth = getAuth();
+    const auth     = getAuth();
 
     const handleReset = async (e) => {
         e.preventDefault();
@@ -24,9 +24,7 @@ const ForgotPasswordPage = () => {
         setLoading(true);
         try {
             await sendPasswordResetEmail(auth, email);
-            setSuccess(
-                "📩 Email reset password telah dikirim! Periksa kotak masuk atau folder spam kamu."
-            );
+            setSuccess("📩 Email reset password telah dikirim! Periksa kotak masuk atau folder spam kamu.");
         } catch (err) {
             console.error("Reset gagal:", err);
             if (err.code === "auth/user-not-found") {
@@ -45,7 +43,7 @@ const ForgotPasswordPage = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-400 via-orange-500 to-yellow-400 flex items-center justify-center px-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 hover:shadow-orange-200">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
                 <h1 className="text-3xl font-extrabold text-orange-600 text-center mb-6">
                     Lupa Password
                 </h1>
@@ -87,6 +85,4 @@ const ForgotPasswordPage = () => {
             </div>
         </div>
     );
-};
-
-export default ForgotPasswordPage;
+}

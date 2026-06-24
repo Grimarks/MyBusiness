@@ -2,51 +2,40 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { auth, db } from "../firebaseConfig.js";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
-
-import Header from "../components/Header.jsx";
-import SearchBar from "../components/SearchBar.jsx";
-import CategoryFilter from "../components/CategoryFilter.jsx";
-import FoodCard from "../components/FoodCard.jsx";
-import BottomNav from "../components/BottomNav.jsx";
-import Loader from "../components/Loader.jsx";
 import { PlusCircleIcon, StarIcon } from "@heroicons/react/24/outline";
+import { getDriveThumbnail } from "../utils/drive";
 
-const getDriveThumbnail = (url, size = "w200-h200") => {
-    if (!url) return null;
-    const ucMatch = url.match(/id=([^&]+)/);
-    if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
-    const dMatch = url.match(/\/d\/([^/]+)\//);
-    if (dMatch) return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
-    return url;
-};
+import Header from "../components/Header";
+import SearchBar from "../components/SearchBar";
+import CategoryFilter from "../components/CategoryFilter";
+import FoodCard from "../components/FoodCard";
+import BottomNav from "../components/BottomNav";
+import Loader from "../components/Loader";
 
-const FavoritePage = () => {
-    const [role, setRole] = useState(null);
+export default function FavoritePage() {
+    const [role, setRole]                   = useState(null);
     const [favoriteItems, setFavoriteItems] = useState([]);
-    const [myFoods, setMyFoods] = useState([]);
-    const [userData, setUserData] = useState(null);
+    const [myFoods, setMyFoods]             = useState([]);
+    const [userData, setUserData]           = useState(null);
     const [filterLocation, setFilterLocation] = useState("All");
-    const [searchTerm, setSearchTerm] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [searchTerm, setSearchTerm]       = useState("");
+    const [loading, setLoading]             = useState(true);
+    const [error, setError]                 = useState(null);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                try {
-                    const usersRef = collection(db, "users");
-                    const q = query(usersRef, where("uid", "==", user.uid));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) {
-                        const data = snap.docs[0].data();
-                        setRole(data.role);
-                        setUserData(data);
-                    }
-                } catch (err) {
-                    console.error("Gagal ambil role user:", err);
+            if (!user) return setRole("guest");
+            try {
+                const snap = await getDocs(
+                    query(collection(db, "users"), where("uid", "==", user.uid))
+                );
+                if (!snap.empty) {
+                    const data = snap.docs[0].data();
+                    setRole(data.role);
+                    setUserData(data);
                 }
-            } else {
-                setRole("guest");
+            } catch (err) {
+                console.error("Gagal ambil role user:", err);
             }
         });
         return () => unsubscribe();
@@ -60,73 +49,56 @@ const FavoritePage = () => {
                 const userId = auth.currentUser?.uid;
 
                 if (role === "pelanggan") {
-                    const favRef = collection(db, "favorites");
-                    const q = query(favRef, where("userId", "==", userId));
-                    const favSnap = await getDocs(q);
-                    const favList = favSnap.docs.map((doc) => doc.data());
-
-                    const detailed = await Promise.all(
-                        favList.map(async (fav) => {
-                            if (!fav.foodId) return null;
-                            const foodRef = doc(db, "foods", fav.foodId);
-                            const foodDoc = await getDoc(foodRef);
-                            if (foodDoc.exists()) {
-                                const data = foodDoc.data();
-                                return {
-                                    id: foodDoc.id,
-                                    ...data,
-                                    isLoved: true,
-                                    image: getDriveThumbnail(data.image) || "/default-food.png",
-                                };
-                            }
-                            return null;
-                        })
+                    const favSnap = await getDocs(
+                        query(collection(db, "favorites"), where("userId", "==", userId))
                     );
-
-                    const filtered = detailed
-                        .filter(
-                            (item) =>
-                                item && (filterLocation === "All" || item.location === filterLocation)
-                        )
-                        .filter(
-                            (item) =>
-                                searchTerm === "" ||
-                                (item.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                (item.description || "")
-                                    .toLowerCase()
-                                    .includes(searchTerm.toLowerCase())
-                        );
-
-                    setFavoriteItems(filtered);
-                }
-
-                if (role === "pemilik") {
-                    const foodsRef = collection(db, "foods");
-                    const q = query(foodsRef, where("uid", "==", userId));
-                    const snap = await getDocs(q);
-
-                    const myList = snap.docs
-                        .map((doc) => {
-                            const data = doc.data();
+                    const detailed = await Promise.all(
+                        favSnap.docs.map(async (favDoc) => {
+                            const foodId = favDoc.data().foodId;
+                            if (!foodId) return null;
+                            const foodDoc = await getDoc(doc(db, "foods", foodId));
+                            if (!foodDoc.exists()) return null;
+                            const data = foodDoc.data();
                             return {
-                                id: doc.id,
+                                id: foodDoc.id,
                                 ...data,
+                                isLoved: true,
                                 image: getDriveThumbnail(data.image) || "/default-food.png",
                             };
                         })
-                        .filter(
+                    );
+
+                    setFavoriteItems(
+                        detailed.filter(
                             (item) =>
+                                item &&
                                 (filterLocation === "All" || item.location === filterLocation) &&
                                 (searchTerm === "" ||
-                                    (item.name || "")
-                                        .toLowerCase()
-                                        .includes(searchTerm.toLowerCase()) ||
-                                    (item.description || "")
-                                        .toLowerCase()
-                                        .includes(searchTerm.toLowerCase()))
-                        );
+                                    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    item.description?.toLowerCase().includes(searchTerm.toLowerCase()))
+                        )
+                    );
+                }
 
-                    setMyFoods(myList);
+                if (role === "pemilik") {
+                    const snap = await getDocs(
+                        query(collection(db, "foods"), where("uid", "==", userId))
+                    );
+                    setMyFoods(
+                        snap.docs
+                            .map((d) => ({
+                                id: d.id,
+                                ...d.data(),
+                                image: getDriveThumbnail(d.data().image) || "/default-food.png",
+                            }))
+                            .filter(
+                                (item) =>
+                                    (filterLocation === "All" || item.location === filterLocation) &&
+                                    (searchTerm === "" ||
+                                        item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        item.description?.toLowerCase().includes(searchTerm.toLowerCase()))
+                            )
+                    );
                 }
             } catch (err) {
                 console.error("Gagal ambil data:", err);
@@ -135,18 +107,16 @@ const FavoritePage = () => {
                 setLoading(false);
             }
         };
-
         fetchData();
     }, [role, filterLocation, searchTerm]);
 
     if (loading) return <Loader message="Memuat data..." />;
-    if (error) return <div className="p-4 text-red-500">{error}</div>;
+    if (error)   return <div className="p-4 text-red-500">{error}</div>;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
             <Header />
 
-            {/* Pelanggan */}
             {role === "pelanggan" && (
                 <main className="container mx-auto p-4 max-w-6xl">
                     <img
@@ -159,10 +129,7 @@ const FavoritePage = () => {
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
                     />
-                    <CategoryFilter
-                        filterLocation={filterLocation}
-                        setFilterLocation={setFilterLocation}
-                    />
+                    <CategoryFilter filterLocation={filterLocation} setFilterLocation={setFilterLocation} />
 
                     {favoriteItems.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 p-4 transition-all duration-300">
@@ -190,7 +157,6 @@ const FavoritePage = () => {
                 </main>
             )}
 
-            {/* Pemilik */}
             {role === "pemilik" && (
                 <main className="container mx-auto p-4 max-w-6xl">
                     <div className="bg-white rounded-2xl mb-6 p-4 shadow-md">
@@ -217,10 +183,7 @@ const FavoritePage = () => {
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
                     />
-                    <CategoryFilter
-                        filterLocation={filterLocation}
-                        setFilterLocation={setFilterLocation}
-                    />
+                    <CategoryFilter filterLocation={filterLocation} setFilterLocation={setFilterLocation} />
 
                     {myFoods.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -230,9 +193,7 @@ const FavoritePage = () => {
                         </div>
                     ) : (
                         <div className="text-center py-12">
-                            <h2 className="text-xl font-semibold text-gray-700 mb-2">
-                                Belum Ada Menu
-                            </h2>
+                            <h2 className="text-xl font-semibold text-gray-700 mb-2">Belum Ada Menu</h2>
                             <p className="text-gray-500 text-sm mb-6">
                                 Tambahkan menu makanan agar bisa dilihat pelanggan.
                             </p>
@@ -257,6 +218,4 @@ const FavoritePage = () => {
             <BottomNav active="Favorite" />
         </div>
     );
-};
-
-export default FavoritePage;
+}

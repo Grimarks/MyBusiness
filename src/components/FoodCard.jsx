@@ -15,21 +15,11 @@ import {
     serverTimestamp,
     getDoc,
 } from "firebase/firestore";
-
-// === Helpers ===
-const getDriveThumbnail = (url, size = "w200-h200") => {
-    if (!url) return "/default-food.png";
-    const ucMatch = url.match(/id=([^&]+)/);
-    if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
-    const dMatch = url.match(/\/d\/([^/]+)\//);
-    if (dMatch) return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
-    return url;
-};
+import { getDriveThumbnail } from "../utils/drive";
 
 const addToFavorites = async (foodId) => {
     const userId = auth.currentUser?.uid || "guest";
-    const favoritesRef = collection(db, "favorites");
-    await addDoc(favoritesRef, {
+    await addDoc(collection(db, "favorites"), {
         foodId,
         userId,
         createdAt: new Date(),
@@ -38,11 +28,14 @@ const addToFavorites = async (foodId) => {
 
 const removeFromFavorites = async (foodId) => {
     const userId = auth.currentUser?.uid || "guest";
-    const favoritesRef = collection(db, "favorites");
-    const q = query(favoritesRef, where("foodId", "==", foodId), where("userId", "==", userId));
+    const q = query(
+        collection(db, "favorites"),
+        where("foodId", "==", foodId),
+        where("userId", "==", userId)
+    );
     const snapshot = await getDocs(q);
-    snapshot.forEach(async (docFav) => {
-        await deleteDoc(doc(db, "favorites", docFav.id));
+    snapshot.forEach(async (favDoc) => {
+        await deleteDoc(doc(db, "favorites", favDoc.id));
     });
 };
 
@@ -56,9 +49,7 @@ const addToCart = async ({ id, title, image, price }) => {
 
     if (!snapshot.empty) {
         const cartDoc = snapshot.docs[0];
-        await updateDoc(cartDoc.ref, {
-            quantity: cartDoc.data().quantity + 1,
-        });
+        await updateDoc(cartDoc.ref, { quantity: cartDoc.data().quantity + 1 });
     } else {
         await addDoc(cartRef, {
             userId,
@@ -72,30 +63,28 @@ const addToCart = async ({ id, title, image, price }) => {
     }
 };
 
-// === Component ===
 export default function FoodCard({
-                                     id,
-                                     image,
-                                     title,
-                                     desc,
-                                     price,
-                                     rating,
-                                     review,
-                                     role = "pelanggan",
-                                     isLoved: initialIsLoved = false,
-                                     onAddToCart,
-                                 }) {
+    id,
+    image,
+    title,
+    desc,
+    price,
+    rating,
+    review,
+    isLoved: initialIsLoved = false,
+    onAddToCart,
+}) {
     const [isLoved, setIsLoved] = useState(initialIsLoved);
     const [roleUser, setRoleUser] = useState("pelanggan");
     const [showModal, setShowModal] = useState(false);
+    const [status, setStatus] = useState(true);
     const navigate = useNavigate();
+
     const imgSrc = getDriveThumbnail(image, "w600-h600");
-    const [status, setStatus] = useState(true); // default ready
 
     useEffect(() => {
         const fetchStatus = async () => {
-            const foodRef = doc(db, "foods", id);
-            const foodSnap = await getDoc(foodRef);
+            const foodSnap = await getDoc(doc(db, "foods", id));
             if (foodSnap.exists()) {
                 setStatus(foodSnap.data().status ?? true);
             }
@@ -103,11 +92,19 @@ export default function FoodCard({
         fetchStatus();
     }, [id]);
 
+    useEffect(() => {
+        const fetchRole = async () => {
+            const userId = auth.currentUser?.uid;
+            if (!userId) return;
+            const snap = await getDoc(doc(db, "users", userId));
+            if (snap.exists()) setRoleUser(snap.data().role);
+        };
+        fetchRole();
+    }, []);
 
     const toggleLove = async () => {
         const newLoveState = !isLoved;
         setIsLoved(newLoveState);
-
         try {
             if (newLoveState) await addToFavorites(id);
             else await removeFromFavorites(id);
@@ -116,38 +113,32 @@ export default function FoodCard({
         }
     };
 
-    useEffect(() => {
-        const fetchRole = async () => {
-            const userId = auth.currentUser?.uid;
-            if (!userId) return;
-            const userRef = doc(db, "users", userId);
-            const snap = await getDoc(userRef);
-            if (snap.exists()) {
-                setRoleUser(snap.data().role);
-            }
-        };
-        fetchRole();
-    }, []);
+    const handleToggleStatus = async () => {
+        try {
+            const newStatus = !status;
+            await updateDoc(doc(db, "foods", id), { status: newStatus });
+            setStatus(newStatus);
+            alert(`Status makanan diubah menjadi ${newStatus ? "READY" : "HABIS"}`);
+        } catch (err) {
+            console.error("Gagal mengubah status:", err);
+            alert("Gagal mengubah status makanan!");
+        }
+    };
 
     return (
         <>
-            {/* === Kartu Utama === */}
             <div
                 className="relative bg-white rounded-xl shadow-md p-3 sm:p-4 hover:shadow-lg transition-shadow duration-200 cursor-pointer w-full max-w-[320px] sm:max-w-sm mx-auto"
                 onClick={() => setShowModal(true)}
             >
-            {!status && (
+                {!status && (
                     <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">
                         Habis
                     </span>
                 )}
 
-                {/* Love Icon */}
                 <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleLove();
-                    }}
+                    onClick={(e) => { e.stopPropagation(); toggleLove(); }}
                     className="absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow-sm"
                 >
                     <img
@@ -157,43 +148,29 @@ export default function FoodCard({
                     />
                 </button>
 
-                {/* Image */}
                 <div className="rounded-xl h-32 w-full overflow-hidden mb-2 sm:mb-3">
                     <img
                         src={imgSrc}
                         alt={title}
-                        className={`w-full h-full object-cover transition ${
-                            !status ? "grayscale opacity-60" : ""
-                        }`}
+                        className={`w-full h-full object-cover transition ${!status ? "grayscale opacity-60" : ""}`}
                     />
                 </div>
 
-                {/* Title & Description */}
-                <h3 className="font-semibold text-sm sm:text-base text-gray-800 truncate">
-                    {title}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-500 mb-1 h-10 overflow-hidden">
-                    {desc}
-                </p>
+                <h3 className="font-semibold text-sm sm:text-base text-gray-800 truncate">{title}</h3>
+                <p className="text-xs sm:text-sm text-gray-500 mb-1 h-10 overflow-hidden">{desc}</p>
 
-                {/* Rating, Price */}
                 <div className="flex items-center justify-between mt-1">
                     <div className="flex items-center text-orange-500 text-xs sm:text-sm gap-1">
                         <StarIcon className="w-4 h-4" />
                         {rating} ({review})
                     </div>
-                    <span className="text-sm sm:text-base font-medium text-gray-700">
-                        Rp {price}
-                    </span>
+                    <span className="text-sm sm:text-base font-medium text-gray-700">Rp {price}</span>
                 </div>
             </div>
 
-            {/* === Modal Detail === */}
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-2 sm:p-4">
                     <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-5 relative overflow-y-auto max-h-[90vh] sm:max-h-[85vh]">
-                    {/* Close */}
-                        {/* Close */}
                         <button
                             className="absolute top-4 right-4 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-2 shadow-md"
                             onClick={() => setShowModal(false)}
@@ -201,35 +178,28 @@ export default function FoodCard({
                             <XMarkIcon className="h-5 w-5" />
                         </button>
 
-                        {/* Gambar besar */}
                         <img
                             src={imgSrc}
                             alt={title}
                             className="w-full h-48 object-cover rounded-xl mb-4"
                         />
 
-                        {/* Detail */}
                         <h2 className="text-xl font-bold text-gray-800 mb-2">{title}</h2>
                         <p className="text-gray-600 mb-3">{desc}</p>
 
                         <div className="flex items-center gap-2 mb-4">
                             <StarIcon className="w-5 h-5 text-orange-500" />
-                            <span className="text-gray-700 text-sm">
-                                {rating} ({review} ulasan)
-                            </span>
+                            <span className="text-gray-700 text-sm">{rating} ({review} ulasan)</span>
                         </div>
 
-                        <p className="text-lg font-semibold text-gray-800 mb-5">
-                            Rp {price}
-                        </p>
+                        <p className="text-lg font-semibold text-gray-800 mb-5">Rp {price}</p>
 
-                        {/* Tombol aksi */}
                         {roleUser === "pelanggan" ? (
                             <button
                                 onClick={() => {
-                                    if (!status) return; // jangan tambah ke keranjang jika habis
+                                    if (!status) return;
                                     addToCart({ id, title, image: imgSrc, price });
-                                    onAddToCart && onAddToCart();
+                                    onAddToCart?.();
                                     setShowModal(false);
                                 }}
                                 disabled={!status}
@@ -252,24 +222,13 @@ export default function FoodCard({
                                 >
                                     Edit makanan
                                 </button>
-
-                                {/* === Tombol Ubah Status Ready/Habis === */}
                                 <button
-                                    onClick={async () => {
-                                        try {
-                                            const foodRef = doc(db, "foods", id);
-                                            const newStatus = !status;
-                                            await updateDoc(foodRef, { status: newStatus });
-                                            setStatus(newStatus);
-                                            alert(`Status makanan diubah menjadi ${newStatus ? "READY" : "HABIS"}`);
-                                        } catch (err) {
-                                            console.error("Gagal mengubah status:", err);
-                                            alert("Gagal mengubah status makanan!");
-                                        }
-                                    }}
-                                    className={`w-full ${
-                                        status ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"
-                                    } text-white font-semibold py-2 rounded-lg transition`}
+                                    onClick={handleToggleStatus}
+                                    className={`w-full font-semibold py-2 rounded-lg transition text-white ${
+                                        status
+                                            ? "bg-green-500 hover:bg-green-600"
+                                            : "bg-red-500 hover:bg-red-600"
+                                    }`}
                                 >
                                     {status ? "Tandai Habis" : "Tandai Ready"}
                                 </button>

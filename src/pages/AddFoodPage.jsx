@@ -1,75 +1,78 @@
 import React, { useState } from "react";
 import { addDoc, collection } from "firebase/firestore";
 import { db, auth } from "../firebaseConfig";
-import Header from "../components/Header.jsx";
+import Header from "../components/Header";
+
+const WEB_APP_URL =
+    "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
+
+const toBase64 = (file) =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (err) => reject(err);
+    });
+
+const uploadToDrive = async (file) => {
+    const base64 = await toBase64(file);
+    const res = await fetch(WEB_APP_URL, {
+        method: "POST",
+        body: new URLSearchParams({
+            file: base64.split(",")[1],
+            mimeType: file.type,
+            filename: file.name,
+        }),
+    });
+    const result = await res.json();
+    if (result.success) return result.url;
+    throw new Error(result.error || "Upload gagal");
+};
+
+const INITIAL_FORM = {
+    name: "",
+    description: "",
+    price: "",
+    stock: "",
+    category: "Cepat Saji",
+    location: "Indralaya",
+    status: true,
+};
 
 export default function AddFoodPage() {
-    const [name, setName] = useState("");
-    const [description, setDescription] = useState("");
-    const [price, setPrice] = useState("");
-    const [stock, setStock] = useState("");
-    const [category, setCategory] = useState("Cepat Saji");
-    const [location, setLocation] = useState("Indralaya");
-    const [image, setImage] = useState(null);
+    const [form, setForm]       = useState(INITIAL_FORM);
+    const [image, setImage]     = useState(null);
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState(true);
 
-    const WEB_APP_URL =
-        "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
-
-    const toBase64 = (file) =>
-        new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = (err) => reject(err);
-        });
-
-    const uploadToDrive = async () => {
-        const base64 = await toBase64(image);
-        const res = await fetch(WEB_APP_URL, {
-            method: "POST",
-            body: new URLSearchParams({
-                file: base64.split(",")[1],
-                mimeType: image.type,
-                filename: image.name,
-            }),
-        });
-        const result = await res.json();
-        if (result.success) return result.url;
-        throw new Error(result.error || "Upload gagal");
-    };
+    const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!image) return alert("Pilih gambar dulu");
         setLoading(true);
         try {
-            const imageUrl = await uploadToDrive();
-            const uid = auth.currentUser?.uid || "unknown";
-            const finalStatus = stock && parseInt(stock) > 0 ? true : status;
+            const imageUrl  = await uploadToDrive(image);
+            const uid       = auth.currentUser?.uid || "unknown";
+            const stockInt  = parseInt(form.stock) || 0;
+            const finalStatus = stockInt > 0 ? true : form.status;
+
             await addDoc(collection(db, "foods"), {
-                name,
-                description,
-                price: parseInt(price),
-                stock: parseInt(stock) || 0,
-                category,
-                location,
+                name: form.name,
+                description: form.description,
+                price: parseInt(form.price),
+                stock: stockInt,
+                category: form.category,
+                location: form.location,
                 image: imageUrl,
                 uid,
                 rating: 0,
                 review: 0,
                 status: finalStatus,
             });
+
             alert("Menu berhasil ditambahkan!");
-            setName("");
-            setDescription("");
-            setPrice("");
-            setStock("");
-            setCategory("Cepat Saji");
-            setLocation("Indralaya");
+            setForm(INITIAL_FORM);
             setImage(null);
-            setStatus(true);
         } catch (err) {
             console.error(err);
             alert("Gagal upload!");
@@ -77,6 +80,9 @@ export default function AddFoodPage() {
             setLoading(false);
         }
     };
+
+    const inputClass = "w-full p-2 sm:p-3 border rounded-lg text-sm sm:text-base";
+    const labelClass = "block font-semibold text-sm sm:text-base";
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 flex flex-col">
@@ -86,62 +92,60 @@ export default function AddFoodPage() {
                 className="flex-1 p-4 sm:p-6 max-w-md w-full mx-auto space-y-4 bg-white rounded-2xl shadow-md mt-4 sm:mt-6"
             >
                 <div>
-                    <label className="block font-semibold text-sm sm:text-base">Nama</label>
+                    <label className={labelClass}>Nama</label>
                     <input
                         type="text"
                         placeholder="Masukan nama menu"
-                        className="w-full p-2 sm:p-3 border rounded-lg text-sm sm:text-base"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        className={inputClass}
+                        value={form.name}
+                        onChange={(e) => setField("name", e.target.value)}
                         required
                     />
                 </div>
 
                 <div>
-                    <label className="block font-semibold text-sm sm:text-base">Deskripsi</label>
+                    <label className={labelClass}>Deskripsi</label>
                     <textarea
                         placeholder="Masukan deskripsi menu"
-                        className="w-full p-2 sm:p-3 border rounded-lg text-sm sm:text-base"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        className={inputClass}
+                        value={form.description}
+                        onChange={(e) => setField("description", e.target.value)}
                         required
                     />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label className="block font-semibold text-sm sm:text-base">Harga</label>
+                        <label className={labelClass}>Harga</label>
                         <input
                             type="number"
                             placeholder="Masukan harga"
-                            className="w-full p-2 sm:p-3 border rounded-lg"
-                            value={price}
-                            onChange={(e) => setPrice(e.target.value)}
+                            className={inputClass}
+                            value={form.price}
+                            onChange={(e) => setField("price", e.target.value)}
                             required
                         />
                     </div>
                     <div>
-                        <label className="block font-semibold text-sm sm:text-base">Stock</label>
+                        <label className={labelClass}>Stock</label>
                         <input
                             type="number"
                             placeholder="Masukan stock"
-                            className="w-full p-2 sm:p-3 border rounded-lg"
-                            value={stock}
-                            onChange={(e) => setStock(e.target.value)}
+                            className={inputClass}
+                            value={form.stock}
+                            onChange={(e) => setField("stock", e.target.value)}
                             required
                         />
                     </div>
                 </div>
 
-                {!stock && (
+                {!form.stock && (
                     <div>
-                        <label className="block font-semibold text-sm sm:text-base">
-                            Status Ketersediaan
-                        </label>
+                        <label className={labelClass}>Status Ketersediaan</label>
                         <select
-                            className="w-full p-2 sm:p-3 border rounded-lg"
-                            value={status ? "ready" : "habis"}
-                            onChange={(e) => setStatus(e.target.value === "ready")}
+                            className={inputClass}
+                            value={form.status ? "ready" : "habis"}
+                            onChange={(e) => setField("status", e.target.value === "ready")}
                         >
                             <option value="ready">Ready</option>
                             <option value="habis">Habis</option>
@@ -151,11 +155,11 @@ export default function AddFoodPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label className="block font-semibold text-sm sm:text-base">Kategori</label>
+                        <label className={labelClass}>Kategori</label>
                         <select
-                            className="w-full p-2 sm:p-3 border rounded-lg"
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value)}
+                            className={inputClass}
+                            value={form.category}
+                            onChange={(e) => setField("category", e.target.value)}
                         >
                             <option value="Cepat Saji">Cepat Saji</option>
                             <option value="Ayam Geprek">Ayam Geprek</option>
@@ -164,11 +168,11 @@ export default function AddFoodPage() {
                         </select>
                     </div>
                     <div>
-                        <label className="block font-semibold text-sm sm:text-base">Lokasi</label>
+                        <label className={labelClass}>Lokasi</label>
                         <select
-                            className="w-full p-2 sm:p-3 border rounded-lg"
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
+                            className={inputClass}
+                            value={form.location}
+                            onChange={(e) => setField("location", e.target.value)}
                         >
                             <option value="Indralaya">Indralaya</option>
                             <option value="Bukit">Bukit</option>
@@ -177,7 +181,7 @@ export default function AddFoodPage() {
                 </div>
 
                 <div>
-                    <label className="block font-semibold text-sm sm:text-base">Foto</label>
+                    <label className={labelClass}>Foto</label>
                     <input
                         type="file"
                         accept="image/*"
@@ -189,8 +193,8 @@ export default function AddFoodPage() {
 
                 <button
                     type="submit"
-                    className="w-full bg-yellow-400 text-black py-3 rounded-full font-semibold hover:bg-yellow-500 transition-colors text-sm sm:text-base"
                     disabled={loading}
+                    className="w-full bg-yellow-400 text-black py-3 rounded-full font-semibold hover:bg-yellow-500 transition-colors text-sm sm:text-base"
                 >
                     {loading ? "Mengupload..." : "Simpan"}
                 </button>

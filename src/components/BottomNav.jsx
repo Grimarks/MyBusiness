@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 
-const baseTabs = [
-    { icon: "Home", label: "Home", path: "/home" },
-    { icon: "Love", label: "Favorite", path: "/favorite" },
-    { icon: "Star", label: "Pilihan", path: "/pilihan" },
-    { icon: "Chat", label: "Chat", path: "/chatPage" },
-    { icon: "User", label: "Akun", path: "/account" },
+const BASE_TABS = [
+    { icon: "Home",  label: "Home",     path: "/home" },
+    { icon: "Love",  label: "Favorite", path: "/favorite" },
+    { icon: "Star",  label: "Pilihan",  path: "/pilihan" },
+    { icon: "Chat",  label: "Chat",     path: "/chatPage" },
+    { icon: "User",  label: "Akun",     path: "/account" },
 ];
 
 export default function BottomNav({ active }) {
@@ -20,10 +20,8 @@ export default function BottomNav({ active }) {
             const userId = auth.currentUser?.uid;
             if (!userId) return setRole("guest");
             try {
-                const userRef = doc(db, "users", userId);
-                const snap = await getDoc(userRef);
-                if (snap.exists()) setRole(snap.data().role);
-                else setRole("guest");
+                const snap = await getDoc(doc(db, "users", userId));
+                setRole(snap.exists() ? snap.data().role : "guest");
             } catch (err) {
                 console.error("Gagal ambil role user:", err);
                 setRole("guest");
@@ -32,18 +30,18 @@ export default function BottomNav({ active }) {
         fetchRole();
     }, []);
 
-    if (!role)
+    if (!role) {
         return (
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3 z-50 text-gray-400 text-sm">
                 ...
             </div>
         );
+    }
 
-    // ubah label sesuai role, tapi path tetap sama
-    const adjustedTabs = baseTabs.map((tab) => {
+    const adjustedTabs = BASE_TABS.map((tab) => {
         if (role === "pemilik") {
             if (tab.label === "Favorite") return { ...tab, label: "Add Menu" };
-            if (tab.label === "Pilihan") return { ...tab, label: "Orders" };
+            if (tab.label === "Pilihan")  return { ...tab, label: "Orders" };
         }
         return tab;
     });
@@ -51,7 +49,8 @@ export default function BottomNav({ active }) {
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 z-50">
             {adjustedTabs.map((tab) => {
-                const isActive = active === tab.label ||
+                const isActive =
+                    active === tab.label ||
                     (role === "pemilik" &&
                         ((tab.label === "Add Menu" && active === "Favorite") ||
                             (tab.label === "Orders" && active === "Pilihan")));

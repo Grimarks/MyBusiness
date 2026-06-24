@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
+import { db, auth } from "../firebaseConfig.js";
+import { onAuthStateChanged } from "firebase/auth";
+
 import Header from "../components/Header";
 import SearchBar from "../components/SearchBar";
 import CategoryFilter from "../components/CategoryFilter";
@@ -7,53 +11,34 @@ import BottomNav from "../components/BottomNav";
 import Loader from "../components/Loader";
 import EarningsCard from "../components/EarningsCard";
 import IncomingOrderCard from "../components/IncomingOrderCard";
-import {
-    collection,
-    getDocs,
-    query,
-    where,
-    doc,
-    getDoc,
-} from "firebase/firestore";
-import { db, auth } from "../firebaseConfig.js";
-import { onAuthStateChanged } from "firebase/auth";
 
 export default function HomePage() {
-    const [role, setRole] = useState(null);
-    const [userId, setUserId] = useState(null);
+    const [role, setRole]       = useState(null);
+    const [userId, setUserId]   = useState(null);
     const [loading, setLoading] = useState(true);
-    const [foods, setFoods] = useState([]);
-    const [orders, setOrders] = useState([]);
+    const [foods, setFoods]     = useState([]);
+    const [orders, setOrders]   = useState([]);
     const [earnings, setEarnings] = useState(0);
-    const [error, setError] = useState(null);
+    const [error, setError]     = useState(null);
     const [filterFoodCategory, setFilterFoodCategory] = useState("All");
-    const [filterLocation, setFilterLocation] = useState("All");
-    const [searchTerm, setSearchTerm] = useState("");
+    const [filterLocation, setFilterLocation]         = useState("All");
+    const [searchTerm, setSearchTerm]                 = useState("");
 
-    // 🔹 Ambil semua makanan
     useEffect(() => {
         const fetchFoods = async () => {
             const snapshot = await getDocs(collection(db, "foods"));
-            const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-            setFoods(data);
+            setFoods(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
         };
         fetchFoods();
     }, []);
 
-    // 🔹 Auth listener
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setUserId(user.uid);
                 try {
-                    const userRef = doc(db, "users", user.uid);
-                    const userSnap = await getDoc(userRef);
-                    if (userSnap.exists()) {
-                        const data = userSnap.data();
-                        setRole(data.role || "pelanggan");
-                    } else {
-                        setRole("pelanggan");
-                    }
+                    const snap = await getDoc(doc(db, "users", user.uid));
+                    setRole(snap.exists() ? snap.data().role || "pelanggan" : "pelanggan");
                 } catch (err) {
                     console.error("Gagal ambil role user:", err);
                     setRole("pelanggan");
@@ -63,57 +48,37 @@ export default function HomePage() {
                 setRole("pelanggan");
             }
         });
-
         return () => unsubscribe();
     }, []);
 
-    // 🔹 Data sesuai role
     useEffect(() => {
+        if (!role || !userId) return;
         const fetchData = async () => {
-            if (!role || !userId) return;
             setLoading(true);
-
             try {
                 if (role === "pelanggan") {
-                    const foodsCollection = collection(db, "foods");
-                    const foodSnapshot = await getDocs(foodsCollection);
-                    const rawFoodList = foodSnapshot.docs.map((doc) => ({
-                        id: doc.id,
-                        ...doc.data(),
-                    }));
+                    const foodSnap = await getDocs(collection(db, "foods"));
+                    const rawFoods = foodSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-                    const favoritesRef = collection(db, "favorites");
-                    const q = query(favoritesRef, where("userId", "==", userId));
-                    const favSnapshot = await getDocs(q);
-                    const favIds = favSnapshot.docs.map((doc) => doc.data().foodId);
+                    const favSnap = await getDocs(
+                        query(collection(db, "favorites"), where("userId", "==", userId))
+                    );
+                    const favIds = favSnap.docs.map((d) => d.data().foodId);
 
-                    const foodList = rawFoodList.map((food) => ({
-                        ...food,
-                        isLoved: favIds.includes(food.id),
-                    }));
-
-                    setFoods(foodList);
+                    setFoods(rawFoods.map((food) => ({ ...food, isLoved: favIds.includes(food.id) })));
                 }
 
                 if (role === "pemilik") {
-                    const userRef = doc(db, "users", userId);
-                    const userSnap = await getDoc(userRef);
-
+                    const userSnap = await getDoc(doc(db, "users", userId));
                     if (userSnap.exists()) {
-                        let { kedaiName } = userSnap.data();
-                        if (!kedaiName) kedaiName = "Nama Kedaimu";
-
-                        const ordersRef = collection(db, "order");
-                        const ordersQuery = query(ordersRef, where("ownerName", "==", kedaiName));
-                        const ordersSnap = await getDocs(ordersQuery);
-
-                        const orderList = ordersSnap.docs.map((doc) => ({
-                            id: doc.id,
-                            ...doc.data(),
-                        }));
-
-                        const finishedOrders = orderList.filter((order) => order.status === true);
-                        const total = finishedOrders.reduce((acc, order) => acc + (order.amount || 0), 0);
+                        const kedaiName = userSnap.data().kedaiName || "Nama Kedaimu";
+                        const ordersSnap = await getDocs(
+                            query(collection(db, "order"), where("ownerName", "==", kedaiName))
+                        );
+                        const orderList = ordersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+                        const total = orderList
+                            .filter((o) => o.status === true)
+                            .reduce((acc, o) => acc + (o.amount || 0), 0);
 
                         setOrders(orderList);
                         setEarnings(total);
@@ -126,35 +91,26 @@ export default function HomePage() {
                 setLoading(false);
             }
         };
-
         fetchData();
     }, [role, userId]);
 
     if (loading) return <Loader message="Memuat data..." />;
-    if (error) return <div className="text-center text-red-500 mt-10">{error}</div>;
+    if (error)   return <div className="text-center text-red-500 mt-10">{error}</div>;
 
-    // 🔹 Filter makanan
     const filteredFoods = foods.filter((food) => {
         const name = food.name?.toLowerCase() || "";
         const desc = food.description?.toLowerCase() || "";
+        const term = searchTerm.toLowerCase();
 
-        const matchSearch =
-            searchTerm === "" ||
-            name.includes(searchTerm.toLowerCase()) ||
-            desc.includes(searchTerm.toLowerCase());
-
-        const matchCategory =
-            filterFoodCategory === "All" || food.category === filterFoodCategory;
-
-        const matchLocation =
-            filterLocation === "All" || food.location === filterLocation;
-
-        return matchSearch && matchCategory && matchLocation;
+        return (
+            (searchTerm === "" || name.includes(term) || desc.includes(term)) &&
+            (filterFoodCategory === "All" || food.category === filterFoodCategory) &&
+            (filterLocation === "All" || food.location === filterLocation)
+        );
     });
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
-            {/* ==================== PELANGGAN VIEW ==================== */}
             {role === "pelanggan" && (
                 <main className="container mx-auto p-4 max-w-6xl">
                     <div
@@ -172,7 +128,6 @@ export default function HomePage() {
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
                     />
-
                     <CategoryFilter
                         filterLocation={filterLocation}
                         setFilterLocation={setFilterLocation}
@@ -204,7 +159,6 @@ export default function HomePage() {
                 </main>
             )}
 
-            {/* ==================== PEMILIK VIEW ==================== */}
             {role === "pemilik" && (
                 <main className="container mx-auto p-4 max-w-6xl">
                     <div

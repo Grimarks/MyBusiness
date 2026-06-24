@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
     ArrowLeftIcon,
     CurrencyDollarIcon,
@@ -7,45 +7,44 @@ import {
     ExclamationCircleIcon,
     LockClosedIcon,
     StarIcon,
-    ShareIcon
+    ShareIcon,
 } from "@heroicons/react/24/solid";
-import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebaseConfig';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import BottomNav from '../components/BottomNav';
-import Header from "../components/Header.jsx";
+import { useNavigate } from "react-router-dom";
+import { auth, db } from "../firebaseConfig";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { getDriveThumbnail } from "../utils/drive";
+import BottomNav from "../components/BottomNav";
+import Header from "../components/Header";
 
-const AccountPage = () => {
+const MENU_ITEMS = [
+    { label: "Edit Profil",           icon: ArrowLeftIcon,           path: "/edit-profile" },
+    { label: "Pointku",               icon: CurrencyDollarIcon },
+    { label: "Bahasa",                icon: GlobeAltIcon },
+    { label: "Tentang",               icon: QuestionMarkCircleIcon },
+    { label: "Syarat dan Ketentuan",  icon: ExclamationCircleIcon },
+    { label: "Layanan Privasi",       icon: LockClosedIcon },
+    { label: "Nilai Aplikasi",        icon: StarIcon },
+    { label: "Bagikan Aplikasi",      icon: ShareIcon },
+];
+
+export default function AccountPage() {
     const navigate = useNavigate();
-    const [userData, setUserData] = useState({ nama: '', email: '', profileImage: '' });
-
-    const getDriveThumbnail = (url, size = "w200-h200") => {
-        if (!url) return "/default-food.png";
-        const ucMatch = url.match(/id=([^&]+)/);
-        if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
-        const dMatch = url.match(/\/d\/([^/]+)\//);
-        if (dMatch) return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
-        return url;
-    };
+    const [userData, setUserData] = useState({ nama: "", email: "", profileImage: "" });
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const docRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    setUserData({
-                        nama: data.nama || '',
-                        email: data.email || user.email || '',
-                        profileImage: data.profileImage || ''
-                    });
-                } else {
-                    setUserData({ nama: '', email: user.email, profileImage: '' });
-                }
+            if (!user) return navigate("/loginpage");
+            const snap = await getDoc(doc(db, "users", user.uid));
+            if (snap.exists()) {
+                const data = snap.data();
+                setUserData({
+                    nama: data.nama || "",
+                    email: data.email || user.email || "",
+                    profileImage: data.profileImage || "",
+                });
             } else {
-                navigate('/loginpage');
+                setUserData({ nama: "", email: user.email, profileImage: "" });
             }
         });
         return () => unsubscribe();
@@ -54,9 +53,9 @@ const AccountPage = () => {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            navigate('/loginpage');
+            navigate("/loginpage");
         } catch (error) {
-            console.error('Error signing out:', error);
+            console.error("Error signing out:", error);
         }
     };
 
@@ -65,6 +64,7 @@ const AccountPage = () => {
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
             <Header />
+
             <div className="text-white pb-6 pt-10 px-6">
                 <div className="flex flex-col items-center mt-4">
                     <div className="bg-white rounded-full p-2 mb-2">
@@ -74,24 +74,14 @@ const AccountPage = () => {
                             className="w-24 h-24 rounded-full object-cover"
                         />
                     </div>
-                    <h1 className="text-xl font-bold">{userData.nama || 'Nama Pengguna'}</h1>
+                    <h1 className="text-xl font-bold">{userData.nama || "Nama Pengguna"}</h1>
                 </div>
             </div>
 
-            {/* Content box */}
             <div className="bg-white rounded-t-3xl p-4 pb-28 min-h-[calc(100vh-200px)]">
                 <h2 className="text-lg font-bold text-black mb-4">Pengaturan umum</h2>
                 <div className="rounded-xl shadow-sm divide-y divide-gray-200 border border-gray-100">
-                    {[
-                        { label: 'Edit Profil', icon: ArrowLeftIcon, path: '/edit-profile' },
-                        { label: 'Pointku', icon: CurrencyDollarIcon },
-                        { label: 'Bahasa', icon: GlobeAltIcon },
-                        { label: 'Tentang', icon: QuestionMarkCircleIcon },
-                        { label: 'Syarat dan Ketentuan', icon: ExclamationCircleIcon },
-                        { label: 'Layanan Privasi', icon: LockClosedIcon },
-                        { label: 'Nilai Aplikasi', icon: StarIcon },
-                        { label: 'Bagikan Aplikasi', icon: ShareIcon },
-                    ].map((item, idx) => (
+                    {MENU_ITEMS.map((item, idx) => (
                         <div
                             key={idx}
                             onClick={() => item.path && navigate(item.path)}
@@ -106,7 +96,6 @@ const AccountPage = () => {
                     ))}
                 </div>
 
-                {/* Logout Button */}
                 <div className="text-center mt-8">
                     <button
                         onClick={handleLogout}
@@ -120,6 +109,4 @@ const AccountPage = () => {
             <BottomNav active="Akun" />
         </div>
     );
-};
-
-export default AccountPage;
+}

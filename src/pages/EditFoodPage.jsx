@@ -2,35 +2,43 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import Header from "../components/Header.jsx";
+import { getDriveThumbnail } from "../utils/drive";
+import Header from "../components/Header";
 
-// === Helpers ===
-const getDriveThumbnail = (url, size = "w200-h200") => {
-    if (!url) return "/default-food.png";
-    const ucMatch = url.match(/id=([^&]+)/);
-    if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
-    const dMatch = url.match(/\/d\/([^/]+)\//);
-    if (dMatch) return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
-    return url;
+const WEB_APP_URL =
+    "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
+
+const toBase64 = (file) =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload  = () => resolve(reader.result);
+        reader.onerror = reject;
+    });
+
+const uploadToDrive = async (file) => {
+    const base64 = await toBase64(file);
+    const res    = await fetch(WEB_APP_URL, {
+        method: "POST",
+        body: new URLSearchParams({
+            file: base64.split(",")[1],
+            mimeType: file.type,
+            filename: file.name,
+        }),
+    });
+    const result = await res.json();
+    if (result.success) return result.url;
+    throw new Error("Upload gagal");
 };
 
 export default function EditFoodPage() {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const foodId = location.state?.foodId;
+    const location  = useLocation();
+    const navigate  = useNavigate();
+    const foodId    = location.state?.foodId;
 
-    const [form, setForm] = useState({
-        name: "",
-        description: "",
-        price: "",
-        stock: "",
-        image: "",
-    });
+    const [form, setForm]           = useState({ name: "", description: "", price: "", stock: "", image: "" });
     const [imageFile, setImageFile] = useState(null);
-    const [loading, setLoading] = useState(false);
-
-    const WEB_APP_URL =
-        "https://script.google.com/macros/s/AKfycbzgie9Ywen5NRZbMTISiGQV-AlgjhEA6MtiF3Ag1Ko9qm5o-7siAFPrCpp38D_v4HRV/exec";
+    const [loading, setLoading]     = useState(false);
 
     useEffect(() => {
         const fetchFood = async () => {
@@ -40,15 +48,9 @@ export default function EditFoodPage() {
                 return;
             }
             try {
-                const foodRef = doc(db, "foods", foodId);
-                const foodSnap = await getDoc(foodRef);
-
-                if (foodSnap.exists()) {
-                    setForm(foodSnap.data());
-                } else {
-                    alert("Menu tidak ditemukan");
-                    navigate(-1);
-                }
+                const snap = await getDoc(doc(db, "foods", foodId));
+                if (snap.exists()) setForm(snap.data());
+                else { alert("Menu tidak ditemukan"); navigate(-1); }
             } catch (err) {
                 console.error(err);
                 alert("Gagal memuat data menu");
@@ -57,49 +59,18 @@ export default function EditFoodPage() {
         fetchFood();
     }, [foodId, navigate]);
 
-    const uploadToDrive = async () => {
-        const base64 = await toBase64(imageFile);
-        const res = await fetch(WEB_APP_URL, {
-            method: "POST",
-            body: new URLSearchParams({
-                file: base64.split(",")[1],
-                mimeType: imageFile.type,
-                filename: imageFile.name,
-            }),
-        });
-
-        const result = await res.json();
-        if (result.success) return result.url;
-        throw new Error("Upload gagal");
-    };
-
-    const toBase64 = (file) =>
-        new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-        });
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!foodId) return;
         setLoading(true);
-
         try {
-            let imageUrl = form.image;
-            if (imageFile) {
-                imageUrl = await uploadToDrive();
-            }
-
-            const foodRef = doc(db, "foods", foodId);
-            await updateDoc(foodRef, {
+            const imageUrl = imageFile ? await uploadToDrive(imageFile) : form.image;
+            await updateDoc(doc(db, "foods", foodId), {
                 ...form,
                 price: parseInt(form.price) || 0,
                 stock: parseInt(form.stock) || 0,
                 image: imageUrl,
             });
-
             alert("Menu berhasil diperbarui!");
             navigate(-1);
         } catch (err) {
@@ -109,6 +80,8 @@ export default function EditFoodPage() {
             setLoading(false);
         }
     };
+
+    const inputClass = "w-full p-2 border rounded text-sm sm:text-base";
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400">
@@ -120,21 +93,21 @@ export default function EditFoodPage() {
                 <input
                     type="text"
                     placeholder="Nama Menu"
-                    className="w-full p-2 border rounded text-sm sm:text-base"
+                    className={inputClass}
                     value={form.name || ""}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
                 />
                 <textarea
                     placeholder="Deskripsi Menu"
-                    className="w-full p-2 border rounded text-sm sm:text-base"
+                    className={inputClass}
                     value={form.description || ""}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
                 <input
                     type="number"
                     placeholder="Harga"
-                    className="w-full p-2 border rounded text-sm sm:text-base"
+                    className={inputClass}
                     value={form.price || ""}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     required
@@ -142,7 +115,7 @@ export default function EditFoodPage() {
                 <input
                     type="number"
                     placeholder="Stock"
-                    className="w-full p-2 border rounded text-sm sm:text-base"
+                    className={inputClass}
                     value={form.stock || ""}
                     onChange={(e) => setForm({ ...form, stock: e.target.value })}
                     required
@@ -162,8 +135,8 @@ export default function EditFoodPage() {
                 )}
                 <button
                     type="submit"
-                    className="w-full bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm sm:text-base"
                     disabled={loading}
+                    className="w-full bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm sm:text-base"
                 >
                     {loading ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>

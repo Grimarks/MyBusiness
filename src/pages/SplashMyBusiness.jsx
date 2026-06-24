@@ -1,15 +1,12 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const SplashMyBusiness = () => {
+export default function SplashMyBusiness() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            navigate("/select-account"); // Ganti dengan halaman setelah splash
-        }, 3000); // Durasi splash screen (3 detik)
-
-        return () => clearTimeout(timer); // Cleanup timer
+        const timer = setTimeout(() => navigate("/select-account"), 3000);
+        return () => clearTimeout(timer);
     }, [navigate]);
 
     return (
@@ -17,6 +14,4 @@ const SplashMyBusiness = () => {
             <img src="/logo-mybusiness.png" alt="MyBusiness Logo" className="h-48" />
         </div>
     );
-};
-
-export default SplashMyBusiness;
+}

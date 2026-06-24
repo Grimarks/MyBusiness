@@ -1,15 +1,13 @@
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 
 export default function ThankYouPage() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            navigate('/home'); // redirect ke home atau dashboard setelah 3 detik
-        }, 3000);
+        const timer = setTimeout(() => navigate("/home"), 3000);
         return () => clearTimeout(timer);
-    }, []);
+    }, [navigate]);
 
     return (
         <div className="flex flex-col justify-center items-center h-screen bg-white px-8 text-center">

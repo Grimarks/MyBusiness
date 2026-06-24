@@ -2,22 +2,20 @@ import React, { useState, useEffect } from "react";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 export default function SearchBar({
-                                      placeholder = "Cari...",
-                                      searchTerm,
-                                      setSearchTerm,
-                                      className = "",
-                                  }) {
+    placeholder = "Cari...",
+    searchTerm,
+    setSearchTerm,
+    className = "",
+}) {
     const [localValue, setLocalValue] = useState(searchTerm || "");
 
     useEffect(() => {
         setLocalValue(searchTerm || "");
     }, [searchTerm]);
 
-    const handleSearch = () => {
-        setSearchTerm(localValue.trim());
-    };
+    const handleSearch = () => setSearchTerm(localValue.trim());
 
-    const clear = () => {
+    const handleClear = () => {
         setLocalValue("");
         setSearchTerm("");
     };
@@ -43,7 +41,7 @@ export default function SearchBar({
                 {localValue && (
                     <button
                         type="button"
-                        onClick={clear}
+                        onClick={handleClear}
                         className="p-1 rounded-full hover:bg-gray-100 mr-2"
                     >
                         <XMarkIcon className="h-5 w-5 text-gray-400" />

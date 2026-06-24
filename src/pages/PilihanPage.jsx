@@ -2,42 +2,30 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { auth, db } from "../firebaseConfig.js";
 import { collection, getDocs, query, where } from "firebase/firestore";
-
-// Komponen
-import Header from "../components/Header.jsx";
-import SearchBar from "../components/SearchBar.jsx";
-import CategoryFilter from "../components/CategoryFilter.jsx";
-import FoodCard from "../components/FoodCard.jsx";
-import BottomNav from "../components/BottomNav.jsx";
-import IncomingOrderCard from "../components/IncomingOrderCard.jsx";
-import Loader from "../components/Loader.jsx";
 import { StarIcon } from "@heroicons/react/24/outline";
+import { getDriveThumbnail } from "../utils/drive";
 
-// 🔹 Helper untuk thumbnail Google Drive
-const getDriveThumbnail = (url, size = "w200-h200") => {
-    if (!url) return null;
-    const ucMatch = url.match(/id=([^&]+)/);
-    if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
-    const dMatch = url.match(/\/d\/([^/]+)\//);
-    if (dMatch) return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
-    return url;
-};
+import Header from "../components/Header";
+import SearchBar from "../components/SearchBar";
+import CategoryFilter from "../components/CategoryFilter";
+import FoodCard from "../components/FoodCard";
+import BottomNav from "../components/BottomNav";
+import IncomingOrderCard from "../components/IncomingOrderCard";
+import Loader from "../components/Loader";
 
-// 🔹 Fungsi pseudo-random agar hasil shuffle stabil dalam 1 hari
 function mulberry32(seed) {
     let t = seed;
     return function () {
-        t += 0x6D2B79F5;
+        t += 0x6d2b79f5;
         let r = Math.imul(t ^ (t >>> 15), 1 | t);
         r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
         return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
     };
 }
 
-// 🔹 Fungsi untuk acak array berdasarkan seed (tanggal)
-const shuffleArrayWithSeed = (array, seed) => {
+const shuffleWithSeed = (array, seed) => {
     const result = [...array];
-    let random = mulberry32(seed);
+    const random = mulberry32(seed);
     for (let i = result.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));
         [result[i], result[j]] = [result[j], result[i]];
@@ -45,51 +33,40 @@ const shuffleArrayWithSeed = (array, seed) => {
     return result;
 };
 
-// 🔹 Ambil seed unik tiap hari (misal: 20251024)
 const getDailySeed = () => {
-    const today = new Date();
-    const dateStr = today.toISOString().split("T")[0]; // contoh: "2025-10-24"
+    const dateStr = new Date().toISOString().split("T")[0];
     return parseInt(dateStr.replace(/-/g, ""), 10);
 };
 
-const PilihanPage = () => {
-    const [role, setRole] = useState(null);
+export default function PilihanPage() {
+    const [role, setRole]             = useState(null);
     const [makananList, setMakananList] = useState([]);
     const [filterLocation, setFilterLocation] = useState("All");
     const [searchTerm, setSearchTerm] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [loading, setLoading]       = useState(true);
+    const [error, setError]           = useState(null);
     const [favoriteIds, setFavoriteIds] = useState([]);
 
-    // 🔹 Ambil role user
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                try {
-                    const usersRef = collection(db, "users");
-                    const q = query(usersRef, where("uid", "==", user.uid));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) {
-                        setRole(snap.docs[0].data().role);
-                    }
-                } catch (err) {
-                    console.error("Gagal ambil role user:", err);
-                }
-            } else {
-                setRole("guest");
+            if (!user) return setRole("guest");
+            try {
+                const snap = await getDocs(
+                    query(collection(db, "users"), where("uid", "==", user.uid))
+                );
+                if (!snap.empty) setRole(snap.docs[0].data().role);
+            } catch (err) {
+                console.error("Gagal ambil role user:", err);
             }
         });
         return () => unsubscribe();
     }, []);
 
-    // 🔹 Ambil daftar favorit (untuk pelanggan)
     useEffect(() => {
         const fetchFavoriteIds = async () => {
             try {
-                const favoritesCollection = collection(db, "favorites");
-                const favoriteSnapshot = await getDocs(favoritesCollection);
-                const favoriteList = favoriteSnapshot.docs.map((doc) => doc.data().foodId);
-                setFavoriteIds(favoriteList);
+                const snap = await getDocs(collection(db, "favorites"));
+                setFavoriteIds(snap.docs.map((d) => d.data().foodId));
             } catch (err) {
                 console.error("Gagal memuat data favorit:", err);
             }
@@ -97,7 +74,6 @@ const PilihanPage = () => {
         fetchFavoriteIds();
     }, []);
 
-    // 🔹 Ambil data makanan dan acak berdasarkan tanggal
     useEffect(() => {
         if (role === "pelanggan") {
             const fetchMakanan = async () => {
@@ -105,31 +81,26 @@ const PilihanPage = () => {
                     setLoading(true);
                     setError(null);
 
-                    const makananRef = collection(db, "foods");
-                    let q = makananRef;
-
-                    if (filterLocation !== "All") {
-                        q = query(makananRef, where("location", "==", filterLocation));
-                    }
+                    const ref = collection(db, "foods");
+                    const q   = filterLocation !== "All"
+                        ? query(ref, where("location", "==", filterLocation))
+                        : ref;
 
                     const snapshot = await getDocs(q);
-                    const allData = snapshot.docs.map((doc) => ({
-                        id: doc.id,
-                        ...doc.data(),
-                        image: getDriveThumbnail(doc.data().image) || "/default-food.png",
+                    const allData  = snapshot.docs.map((d) => ({
+                        id: d.id,
+                        ...d.data(),
+                        image: getDriveThumbnail(d.data().image) || "/default-food.png",
                     }));
 
-                    const filteredData = allData.filter(
-                        (makanan) =>
+                    const filtered = allData.filter(
+                        (item) =>
                             searchTerm === "" ||
-                            (makanan.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (makanan.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+                            item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            item.description?.toLowerCase().includes(searchTerm.toLowerCase())
                     );
 
-                    const seed = getDailySeed();
-                    const shuffledData = shuffleArrayWithSeed(filteredData, seed);
-
-                    setMakananList(shuffledData);
+                    setMakananList(shuffleWithSeed(filtered, getDailySeed()));
                 } catch (err) {
                     console.error("Error fetching makanan:", err);
                     setError("Gagal memuat data makanan. Coba lagi nanti.");
@@ -137,22 +108,19 @@ const PilihanPage = () => {
                     setLoading(false);
                 }
             };
-
             fetchMakanan();
         } else if (role) {
-            // Jika role bukan pelanggan (misal: pemilik), matikan loading
             setLoading(false);
         }
     }, [role, filterLocation, searchTerm]);
 
     if (loading) return <Loader message="Memuat pilihan makanan..." />;
-    if (error) return <div className="p-4 text-red-500 text-center">{error}</div>;
+    if (error)   return <div className="p-4 text-red-500 text-center">{error}</div>;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
             <Header />
 
-            {/* ========== Pelanggan View ========== */}
             {role === "pelanggan" && (
                 <main className="container mx-auto p-4 max-w-6xl">
                     <img
@@ -172,17 +140,17 @@ const PilihanPage = () => {
 
                     {makananList.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 p-4 transition-all duration-300">
-                            {makananList.map((makanan) => (
+                            {makananList.map((item) => (
                                 <FoodCard
-                                    key={makanan.id}
-                                    id={makanan.id}
-                                    title={makanan.name}
-                                    desc={makanan.description}
-                                    image={makanan.image}
-                                    price={makanan.price}
-                                    rating={makanan.rating}
-                                    isLoved={favoriteIds.includes(makanan.id)}
-                                    review={makanan.review}
+                                    key={item.id}
+                                    id={item.id}
+                                    title={item.name}
+                                    desc={item.description}
+                                    image={item.image}
+                                    price={item.price}
+                                    rating={item.rating}
+                                    review={item.review}
+                                    isLoved={favoriteIds.includes(item.id)}
                                 />
                             ))}
                         </div>
@@ -206,7 +174,6 @@ const PilihanPage = () => {
                 </main>
             )}
 
-            {/* ========== Pemilik View ========== */}
             {role === "pemilik" && (
                 <main className="container mx-auto p-4 max-w-6xl">
                     <div className="bg-white rounded-2xl shadow-md p-4 mb-6">
@@ -221,6 +188,4 @@ const PilihanPage = () => {
             <BottomNav active="Pilihan" />
         </div>
     );
-};
-
-export default PilihanPage;
+}

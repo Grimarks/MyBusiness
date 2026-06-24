@@ -1,29 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebaseConfig.js";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
-import Loader from "../components/Loader";
-import BottomNav from "../components/BottomNav";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { useNavigate } from "react-router-dom";
+import { getDriveThumbnail } from "../utils/drive";
+import Loader from "../components/Loader";
+import BottomNav from "../components/BottomNav";
 
-// Helper ambil thumbnail dari Google Drive
-const getDriveThumbnail = (url, size = "w200-h200") => {
-    if (!url) return "/default-food.png";
-    const ucMatch = url.match(/id=([^&]+)/);
-    if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=${size}`;
-    const dMatch = url.match(/\/d\/([^/]+)\//);
-    if (dMatch) return `https://drive.google.com/thumbnail?id=${dMatch[1]}&sz=${size}`;
-    return url;
-};
-
-// Label status (karena sekarang hanya boolean)
-const statusLabel = {
+const STATUS_LABEL = {
     false: "⏳ Diproses",
-    true: "✔️ Selesai",
+    true:  "✔️ Selesai",
 };
 
 export default function MyOrdersPage() {
-    const [orders, setOrders] = useState([]);
+    const [orders, setOrders]   = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -34,58 +24,43 @@ export default function MyOrdersPage() {
 
             try {
                 setLoading(true);
-                const ordersRef = collection(db, "order");
-                const q = query(ordersRef, where("customerId", "==", user.uid));
-                const snap = await getDocs(q);
+                const snap = await getDocs(
+                    query(collection(db, "order"), where("customerId", "==", user.uid))
+                );
 
-                // Group orders by ownerId
                 const grouped = {};
-                for (let d of snap.docs) {
-                    const data = d.data();
+                for (const d of snap.docs) {
+                    const data    = d.data();
                     const ownerId = data.ownerId;
 
-                    // ambil data toko
-                    let tokoName = data.ownerName;
+                    let tokoName  = data.ownerName;
                     let tokoImage = "";
                     try {
-                        const tokoRef = doc(db, "users", ownerId);
-                        const tokoSnap = await getDoc(tokoRef);
+                        const tokoSnap = await getDoc(doc(db, "users", ownerId));
                         if (tokoSnap.exists()) {
-                            const tokoData = tokoSnap.data();
-                            tokoName = tokoData.kedaiName || "Kedai Tanpa Nama";
-                            tokoImage = getDriveThumbnail(tokoData.kedaiImage) || "/default-store.png";
+                            tokoName  = tokoSnap.data().kedaiName || "Kedai Tanpa Nama";
+                            tokoImage = getDriveThumbnail(tokoSnap.data().kedaiImage) || "/default-store.png";
                         }
                     } catch (err) {
                         console.error("Gagal ambil toko:", err);
                     }
 
                     if (!grouped[ownerId]) {
-                        grouped[ownerId] = {
-                            tokoName,
-                            tokoImage,
-                            orders: [],
-                        };
+                        grouped[ownerId] = { tokoName, tokoImage, orders: [] };
                     }
-                    grouped[ownerId].orders.push({
-                        id: d.id,
-                        ...data,
-                    });
+                    grouped[ownerId].orders.push({ id: d.id, ...data });
                 }
 
-                // Urutkan pesanan dalam setiap toko
-                const groupedWithSorting = Object.values(grouped).map((toko) => {
-                    const sortedOrders = toko.orders.sort((a, b) => {
-                        // Prioritas: status false (masih proses) dulu
+                const result = Object.values(grouped).map((toko) => ({
+                    ...toko,
+                    orders: toko.orders.sort((a, b) => {
                         if (a.status === false && b.status === true) return -1;
-                        if (a.status === true && b.status === false) return 1;
-
-                        // Kalau sama-sama status, urutkan berdasarkan createdAt terbaru
+                        if (a.status === true  && b.status === false) return 1;
                         return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
-                    });
-                    return { ...toko, orders: sortedOrders };
-                });
+                    }),
+                }));
 
-                setOrders(groupedWithSorting);
+                setOrders(result);
             } catch (err) {
                 console.error("Gagal ambil pesanan:", err);
             } finally {
@@ -100,7 +75,6 @@ export default function MyOrdersPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Header */}
             <div className="flex items-center p-4 bg-gradient-to-r from-orange-500 to-yellow-400 text-white shadow-md">
                 <button onClick={() => navigate(-1)} className="p-2 mr-2">
                     <ArrowLeftIcon className="h-6 w-6" />
@@ -108,17 +82,12 @@ export default function MyOrdersPage() {
                 <h1 className="text-xl font-bold">Pesanan Saya</h1>
             </div>
 
-            {/* List Pesanan */}
             <div className="p-4 space-y-6">
                 {orders.length === 0 ? (
                     <p className="text-center text-gray-500">Belum ada pesanan.</p>
                 ) : (
                     orders.map((toko) => (
-                        <div
-                            key={toko.tokoName}
-                            className="bg-white rounded-2xl shadow-md overflow-hidden"
-                        >
-                            {/* Info Toko */}
+                        <div key={toko.tokoName} className="bg-white rounded-2xl shadow-md overflow-hidden">
                             <div className="flex items-center gap-3 p-4 border-b">
                                 {toko.tokoImage && (
                                     <img
@@ -130,7 +99,6 @@ export default function MyOrdersPage() {
                                 <h2 className="font-bold text-lg">{toko.tokoName}</h2>
                             </div>
 
-                            {/* Daftar Order */}
                             <div className="divide-y">
                                 {toko.orders.map((order) => (
                                     <div key={order.id} className="p-4">
@@ -138,12 +106,8 @@ export default function MyOrdersPage() {
                                             <span className="text-sm text-gray-600">
                                                 {new Date(order.createdAt?.seconds * 1000).toLocaleString()}
                                             </span>
-                                            <span
-                                                className={`font-medium text-sm ${
-                                                    order.status ? "text-green-600" : "text-orange-600"
-                                                }`}
-                                            >
-                                                {statusLabel[order.status]}
+                                            <span className={`font-medium text-sm ${order.status ? "text-green-600" : "text-orange-600"}`}>
+                                                {STATUS_LABEL[order.status]}
                                             </span>
                                         </div>
 
@@ -161,9 +125,7 @@ export default function MyOrdersPage() {
                                                             {item.qty} x Rp{item.price}
                                                         </p>
                                                     </div>
-                                                    <p className="font-semibold">
-                                                        Rp{item.qty * item.price}
-                                                    </p>
+                                                    <p className="font-semibold">Rp{item.qty * item.price}</p>
                                                 </li>
                                             ))}
                                         </ul>
