@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { auth, db } from "../firebaseConfig.js";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
-import { PlusCircleIcon, StarIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, HeartIcon } from "@heroicons/react/24/outline";
 import { getDriveThumbnail } from "../utils/drive";
 
 import Header from "../components/Header";
@@ -13,207 +13,161 @@ import BottomNav from "../components/BottomNav";
 import Loader from "../components/Loader";
 
 export default function FavoritePage() {
-    const [role, setRole]                   = useState(null);
-    const [favoriteItems, setFavoriteItems] = useState([]);
-    const [myFoods, setMyFoods]             = useState([]);
-    const [userData, setUserData]           = useState(null);
+    const [role, setRole]           = useState(null);
+    const [favorites, setFavorites] = useState([]);
+    const [myFoods, setMyFoods]     = useState([]);
+    const [userData, setUserData]   = useState(null);
     const [filterLocation, setFilterLocation] = useState("All");
-    const [searchTerm, setSearchTerm]       = useState("");
-    const [loading, setLoading]             = useState(true);
-    const [error, setError]                 = useState(null);
+    const [searchTerm, setSearchTerm]         = useState("");
+    const [loading, setLoading]     = useState(true);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(async (user) => {
+        const unsub = auth.onAuthStateChanged(async (user) => {
             if (!user) return setRole("guest");
-            try {
-                const snap = await getDocs(
-                    query(collection(db, "users"), where("uid", "==", user.uid))
-                );
-                if (!snap.empty) {
-                    const data = snap.docs[0].data();
-                    setRole(data.role);
-                    setUserData(data);
-                }
-            } catch (err) {
-                console.error("Gagal ambil role user:", err);
-            }
+            const snap = await getDocs(query(collection(db, "users"), where("uid","==",user.uid)));
+            if (!snap.empty) { const d = snap.docs[0].data(); setRole(d.role); setUserData(d); }
         });
-        return () => unsubscribe();
+        return () => unsub();
     }, []);
 
     useEffect(() => {
         if (!role) return;
-        const fetchData = async () => {
+        const load = async () => {
+            setLoading(true);
+            const userId = auth.currentUser?.uid;
             try {
-                setLoading(true);
-                const userId = auth.currentUser?.uid;
-
                 if (role === "pelanggan") {
-                    const favSnap = await getDocs(
-                        query(collection(db, "favorites"), where("userId", "==", userId))
-                    );
-                    const detailed = await Promise.all(
-                        favSnap.docs.map(async (favDoc) => {
-                            const foodId = favDoc.data().foodId;
-                            if (!foodId) return null;
-                            const foodDoc = await getDoc(doc(db, "foods", foodId));
-                            if (!foodDoc.exists()) return null;
-                            const data = foodDoc.data();
-                            return {
-                                id: foodDoc.id,
-                                ...data,
-                                isLoved: true,
-                                image: getDriveThumbnail(data.image) || "/default-food.png",
-                            };
-                        })
-                    );
-
-                    setFavoriteItems(
-                        detailed.filter(
-                            (item) =>
-                                item &&
-                                (filterLocation === "All" || item.location === filterLocation) &&
-                                (searchTerm === "" ||
-                                    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    item.description?.toLowerCase().includes(searchTerm.toLowerCase()))
-                        )
-                    );
+                    const favSnap = await getDocs(query(collection(db, "favorites"), where("userId","==",userId)));
+                    const detailed = await Promise.all(favSnap.docs.map(async (fd) => {
+                        const foodId = fd.data().foodId;
+                        if (!foodId) return null;
+                        const foodDoc = await getDoc(doc(db, "foods", foodId));
+                        if (!foodDoc.exists()) return null;
+                        const d = foodDoc.data();
+                        return { id: foodDoc.id, ...d, isLoved: true, image: getDriveThumbnail(d.image) || "/default-food.png" };
+                    }));
+                    setFavorites(detailed.filter((i) =>
+                        i &&
+                        (filterLocation === "All" || i.location === filterLocation) &&
+                        (!searchTerm || i.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            i.description?.toLowerCase().includes(searchTerm.toLowerCase()))
+                    ));
                 }
-
                 if (role === "pemilik") {
-                    const snap = await getDocs(
-                        query(collection(db, "foods"), where("uid", "==", userId))
-                    );
-                    setMyFoods(
-                        snap.docs
-                            .map((d) => ({
-                                id: d.id,
-                                ...d.data(),
-                                image: getDriveThumbnail(d.data().image) || "/default-food.png",
-                            }))
-                            .filter(
-                                (item) =>
-                                    (filterLocation === "All" || item.location === filterLocation) &&
-                                    (searchTerm === "" ||
-                                        item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                        item.description?.toLowerCase().includes(searchTerm.toLowerCase()))
-                            )
-                    );
+                    const snap = await getDocs(query(collection(db, "foods"), where("uid","==",userId)));
+                    setMyFoods(snap.docs.map((d) => ({
+                        id: d.id, ...d.data(), image: getDriveThumbnail(d.data().image) || "/default-food.png",
+                    })).filter((i) =>
+                        (filterLocation === "All" || i.location === filterLocation) &&
+                        (!searchTerm || i.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+                    ));
                 }
-            } catch (err) {
-                console.error("Gagal ambil data:", err);
-                setError("Gagal memuat data.");
-            } finally {
-                setLoading(false);
-            }
+            } catch (e) { console.error(e); }
+            finally { setLoading(false); }
         };
-        fetchData();
+        load();
     }, [role, filterLocation, searchTerm]);
 
-    if (loading) return <Loader message="Memuat data..." />;
-    if (error)   return <div className="p-4 text-red-500">{error}</div>;
+    if (loading) return <Loader message="Memuat..." />;
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
+    /* ── Shared top bar ── */
+    const TopBar = () => (
+        <div
+            className="sticky-header"
+            style={{ background: "linear-gradient(160deg,#F97316,#EAB308)", borderRadius: "0 0 24px 24px" }}
+        >
             <Header />
+            <SearchBar
+                placeholder={role === "pemilik" ? "Cari menu di kedaimu..." : "Cari makanan favoritmu..."}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                className="pb-4"
+            />
+        </div>
+    );
 
-            {role === "pelanggan" && (
-                <main className="container mx-auto p-4 max-w-6xl">
-                    <img
-                        src="/promo.png"
-                        alt="Promo"
-                        className="object-contain rounded-3xl mb-4 w-full max-h-48 sm:max-h-64 md:max-h-72"
-                    />
-                    <SearchBar
-                        placeholder="Cari makanan favoritmu..."
-                        searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
-                    />
+    /* ── Pelanggan ── */
+    if (role === "pelanggan") {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <TopBar />
+                <div className="bg-white shadow-sm">
                     <CategoryFilter filterLocation={filterLocation} setFilterLocation={setFilterLocation} />
-
-                    {favoriteItems.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 p-4 transition-all duration-300">
-                            {favoriteItems.map((item) => (
-                                <FoodCard key={item.id} {...item} isLoved={true} />
-                            ))}
+                </div>
+                <div className="px-4 pt-4 pb-nav max-w-5xl mx-auto">
+                    {favorites.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {favorites.map((item) => <FoodCard key={item.id} {...item} isLoved />)}
                         </div>
                     ) : (
-                        <div className="text-center py-12">
-                            <StarIcon className="mx-auto text-gray-300 text-6xl mb-4" />
-                            <h2 className="text-xl font-semibold text-gray-700 mb-2">
-                                Belum Ada Item Favorit
-                            </h2>
-                            <p className="text-gray-500 text-sm mb-6">
-                                Makanan yang kamu tandai sebagai favorit akan muncul di sini.
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-3">
+                                <HeartIcon className="w-8 h-8 text-red-300" />
+                            </div>
+                            <h3 className="font-bold text-gray-800 mb-1">Belum Ada Favorit</h3>
+                            <p className="text-sm text-gray-500 mb-5 max-w-[200px]">
+                                Tandai makanan yang kamu suka untuk lihat di sini.
                             </p>
-                            <Link
-                                to="/home"
-                                className="bg-orange-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-md hover:shadow-lg"
-                            >
-                                Cari Makanan Sekarang
-                            </Link>
+                            <Link to="/home" className="btn btn-primary btn-sm">Jelajahi Menu</Link>
                         </div>
                     )}
-                </main>
-            )}
+                </div>
+                <BottomNav active="Favorite" />
+            </div>
+        );
+    }
 
-            {role === "pemilik" && (
-                <main className="container mx-auto p-4 max-w-6xl">
-                    <div className="bg-white rounded-2xl mb-6 p-4 shadow-md">
-                        <h2 className="text-2xl sm:text-3xl font-bold text-orange-500 mb-2">
-                            {userData?.kedaiName || "Nama Kedai"}
-                        </h2>
+    /* ── Pemilik ── */
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <TopBar />
+
+            {/* Store card */}
+            <div className="px-4 pt-5 max-w-5xl mx-auto">
+                <div className="bg-white rounded-2xl overflow-hidden mb-4" style={{ border: "1px solid #F3F4F6", boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                    <div className="h-36 bg-gray-100 relative overflow-hidden">
                         <img
                             src={getDriveThumbnail(userData?.kedaiImage) || "/default-store.png"}
-                            alt="Foto Kedai"
-                            className="object-cover w-full h-40 sm:h-48 md:h-56 rounded-xl mb-3"
+                            alt="Toko"
+                            className="w-full h-full object-cover"
                         />
-                        <div className="flex justify-end">
-                            <Link
-                                to="/edit-store"
-                                className="bg-orange-500 text-white px-3 py-1.5 text-sm rounded-md font-medium hover:bg-orange-600 transition-colors"
-                            >
-                                Edit Profil
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                        <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+                            <h2 className="text-white font-bold text-lg">{userData?.kedaiName || "Nama Kedai"}</h2>
+                            <Link to="/edit-store" className="btn btn-sm bg-white text-gray-800 rounded-full font-semibold text-xs px-3 py-1.5">
+                                Edit Toko
                             </Link>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <SearchBar
-                        placeholder="Cari menu di kedaimu..."
-                        searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
-                    />
-                    <CategoryFilter filterLocation={filterLocation} setFilterLocation={setFilterLocation} />
+            <div className="bg-white shadow-sm">
+                <CategoryFilter filterLocation={filterLocation} setFilterLocation={setFilterLocation} />
+            </div>
 
-                    {myFoods.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                            {myFoods.map((item) => (
-                                <FoodCard key={item.id} {...item} isLoved={false} />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-12">
-                            <h2 className="text-xl font-semibold text-gray-700 mb-2">Belum Ada Menu</h2>
-                            <p className="text-gray-500 text-sm mb-6">
-                                Tambahkan menu makanan agar bisa dilihat pelanggan.
-                            </p>
-                            <Link
-                                to="/add-food"
-                                className="bg-orange-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-md hover:shadow-lg"
-                            >
-                                Tambah Menu Sekarang
-                            </Link>
-                        </div>
-                    )}
+            <div className="px-4 pt-4 pb-nav max-w-5xl mx-auto">
+                {myFoods.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {myFoods.map((item) => <FoodCard key={item.id} {...item} isLoved={false} />)}
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <h3 className="font-bold text-gray-800 mb-1">Belum Ada Menu</h3>
+                        <p className="text-sm text-gray-500 mb-5">Tambahkan menu pertama anda.</p>
+                        <Link to="/add-food" className="btn btn-primary btn-sm">+ Tambah Menu</Link>
+                    </div>
+                )}
+            </div>
 
-                    <Link
-                        to="/add-food"
-                        className="fixed bottom-24 right-4 sm:right-8 bg-gradient-to-br from-orange-500 to-orange-600 text-white p-4 sm:p-5 rounded-full shadow-lg hover:scale-110 transition-transform"
-                    >
-                        <PlusCircleIcon className="h-7 w-7 sm:h-8 sm:w-8" />
-                    </Link>
-                </main>
-            )}
+            {/* FAB */}
+            <Link
+                to="/add-food"
+                className="fixed bottom-20 right-4 w-14 h-14 rounded-full flex items-center justify-center text-white z-40"
+                style={{ background: "linear-gradient(135deg,#F97316,#EAB308)", boxShadow: "0 4px 20px rgba(249,115,22,.4)" }}
+            >
+                <PlusIcon className="w-6 h-6" />
+            </Link>
 
             <BottomNav active="Favorite" />
         </div>

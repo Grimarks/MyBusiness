@@ -7,25 +7,12 @@ import Header from "../components/Header";
 import SearchBar from "../components/SearchBar";
 
 const formatDate = (date) => {
-    const now  = new Date();
-    const d    = new Date(date);
-    const diff = now - d;
-
-    const isToday =
-        d.getDate() === now.getDate() &&
-        d.getMonth() === now.getMonth() &&
-        d.getFullYear() === now.getFullYear();
-
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const isYesterday =
-        d.getDate() === yesterday.getDate() &&
-        d.getMonth() === yesterday.getMonth() &&
-        d.getFullYear() === yesterday.getFullYear();
-
-    if (isToday)     return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-    if (isYesterday) return "Kemarin";
-    if (diff < 7 * 24 * 60 * 60 * 1000) return d.toLocaleDateString("id-ID", { weekday: "long" });
+    const now = new Date(), d = new Date(date), diff = now - d;
+    const same = (a, b) => a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+    const yday = new Date(now); yday.setDate(now.getDate() - 1);
+    if (same(d, now))  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    if (same(d, yday)) return "Kemarin";
+    if (diff < 7*864e5) return d.toLocaleDateString("id-ID", { weekday: "long" });
     return d.toLocaleDateString("id-ID");
 };
 
@@ -34,64 +21,70 @@ export default function ChatPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const unsub = onAuthStateChanged(auth, async (user) => {
             if (!user) return;
-            const usersSnap = await getDocs(
-                query(collection(db, "users"), where("uid", "==", user.uid))
-            );
+            const usersSnap = await getDocs(query(collection(db, "users"), where("uid","==",user.uid)));
             if (usersSnap.empty) return;
-
             const { role } = usersSnap.docs[0].data();
             try {
-                const snapshot = await getDocs(collection(db, "dummyChats"));
-                let data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-
+                const snap = await getDocs(collection(db, "dummyChats"));
+                let data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
                 data = role === "pemilik"
                     ? data.filter((c) => c.name.startsWith("Cust"))
                     : data.filter((c) => !c.name.startsWith("Cust"));
-
                 data.sort((a, b) => new Date(b.time) - new Date(a.time));
                 setChats(data);
-            } catch (error) {
-                console.error("Gagal mengambil data chat:", error);
-            } finally {
-                setLoading(false);
-            }
+            } catch (e) { console.error(e); }
+            finally { setLoading(false); }
         });
-
-        return () => unsubscribe();
+        return () => unsub();
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-orange-500 to-yellow-400 pb-24">
-            <Header />
-            <SearchBar placeholder="Cari pesan" />
+        <div className="min-h-screen bg-gray-50">
+            <div style={{ background: "linear-gradient(160deg,#F97316,#EAB308)", borderRadius: "0 0 24px 24px" }}>
+                <Header />
+                <div className="px-5 pb-2">
+                    <h1 className="text-white font-bold text-xl">Pesan</h1>
+                </div>
+                <SearchBar placeholder="Cari percakapan..." className="pb-4" searchTerm="" setSearchTerm={() => {}} />
+            </div>
 
-            <div className="px-3 sm:px-6 mt-4 space-y-3 sm:space-y-4 max-w-2xl mx-auto w-full">
+            <div className="px-4 pt-5 pb-nav max-w-lg mx-auto">
                 {loading ? (
-                    <p className="text-white text-center text-sm sm:text-base">Loading chats...</p>
-                ) : chats.length === 0 ? (
-                    <p className="text-white text-center text-sm sm:text-base">Belum ada pesan.</p>
-                ) : (
-                    chats.map((chat) => (
-                        <div
-                            key={chat.id}
-                            className="bg-white rounded-xl px-4 py-3 flex justify-between items-center shadow hover:shadow-md transition-all duration-200 w-full"
-                        >
-                            <div className="flex items-center space-x-3 min-w-0">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-400 flex-shrink-0" />
-                                <div className="min-w-0">
-                                    <p className="font-semibold text-sm sm:text-base truncate">{chat.name}</p>
-                                    <p className="text-gray-600 text-xs sm:text-sm truncate max-w-[10rem] sm:max-w-[14rem]">
-                                        {chat.message}
-                                    </p>
+                    <div className="space-y-3">
+                        {[1,2,3].map((i) => (
+                            <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-2xl">
+                                <div className="skeleton w-12 h-12 rounded-full" />
+                                <div className="flex-1 space-y-2">
+                                    <div className="skeleton h-3 w-24 rounded" />
+                                    <div className="skeleton h-3 w-40 rounded" />
                                 </div>
                             </div>
-                            <div className="text-gray-500 text-xs sm:text-sm ml-2 flex-shrink-0 whitespace-nowrap">
-                                {formatDate(chat.time?.toDate ? chat.time.toDate() : chat.time)}
+                        ))}
+                    </div>
+                ) : chats.length === 0 ? (
+                    <div className="flex flex-col items-center py-20 text-center">
+                        <span className="text-5xl mb-3">💬</span>
+                        <p className="text-gray-400 text-sm">Belum ada percakapan</p>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {chats.map((chat) => (
+                            <div key={chat.id} className="flex items-center gap-3 p-3 bg-white rounded-2xl hover:bg-gray-50 cursor-pointer transition-colors" style={{ border: "1px solid #F3F4F6" }}>
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-200 to-yellow-200 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-lg font-bold text-orange-600">{chat.name?.[0]}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm text-gray-900 truncate">{chat.name}</p>
+                                    <p className="text-xs text-gray-500 truncate">{chat.message}</p>
+                                </div>
+                                <span className="text-[10px] text-gray-400 flex-shrink-0">
+                                    {formatDate(chat.time?.toDate ? chat.time.toDate() : chat.time)}
+                                </span>
                             </div>
-                        </div>
-                    ))
+                        ))}
+                    </div>
                 )}
             </div>
 

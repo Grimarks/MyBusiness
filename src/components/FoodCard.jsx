@@ -1,239 +1,209 @@
 import React, { useState, useEffect } from "react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, StarIcon as StarOutline } from "@heroicons/react/24/outline";
 import { StarIcon } from "@heroicons/react/24/solid";
+import { HeartIcon } from "@heroicons/react/24/solid";
+import { HeartIcon as HeartOutline } from "@heroicons/react/24/outline";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "../firebaseConfig.js";
 import {
-    collection,
-    addDoc,
-    deleteDoc,
-    doc,
-    getDocs,
-    query,
-    where,
-    updateDoc,
-    serverTimestamp,
-    getDoc,
+    collection, addDoc, deleteDoc, doc, getDocs,
+    query, where, updateDoc, serverTimestamp, getDoc,
 } from "firebase/firestore";
 import { getDriveThumbnail } from "../utils/drive";
 
-const addToFavorites = async (foodId) => {
+/* ── Firestore helpers ── */
+const toggleFavorite = async (foodId, isLoved) => {
     const userId = auth.currentUser?.uid || "guest";
-    await addDoc(collection(db, "favorites"), {
-        foodId,
-        userId,
-        createdAt: new Date(),
-    });
-};
-
-const removeFromFavorites = async (foodId) => {
-    const userId = auth.currentUser?.uid || "guest";
-    const q = query(
-        collection(db, "favorites"),
-        where("foodId", "==", foodId),
-        where("userId", "==", userId)
-    );
-    const snapshot = await getDocs(q);
-    snapshot.forEach(async (favDoc) => {
-        await deleteDoc(doc(db, "favorites", favDoc.id));
-    });
+    if (isLoved) {
+        const q = query(
+            collection(db, "favorites"),
+            where("foodId", "==", foodId),
+            where("userId", "==", userId)
+        );
+        const snap = await getDocs(q);
+        snap.forEach((d) => deleteDoc(doc(db, "favorites", d.id)));
+    } else {
+        await addDoc(collection(db, "favorites"), { foodId, userId, createdAt: new Date() });
+    }
 };
 
 const addToCart = async ({ id, title, image, price }) => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
-
-    const cartRef = collection(db, "carts");
-    const q = query(cartRef, where("userId", "==", userId), where("foodId", "==", id));
-    const snapshot = await getDocs(q);
-
-    if (!snapshot.empty) {
-        const cartDoc = snapshot.docs[0];
-        await updateDoc(cartDoc.ref, { quantity: cartDoc.data().quantity + 1 });
+    const q    = query(collection(db, "carts"), where("userId","==",userId), where("foodId","==",id));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+        await updateDoc(snap.docs[0].ref, { quantity: snap.docs[0].data().quantity + 1 });
     } else {
-        await addDoc(cartRef, {
-            userId,
-            foodId: id,
-            name: title,
-            image,
-            price,
-            quantity: 1,
+        await addDoc(collection(db, "carts"), {
+            userId, foodId: id, name: title, image, price, quantity: 1,
             createdAt: serverTimestamp(),
         });
     }
 };
 
+/* ── Component ── */
 export default function FoodCard({
-    id,
-    image,
-    title,
-    desc,
-    price,
-    rating,
-    review,
+    id, image, title, desc, price, rating, review,
     isLoved: initialIsLoved = false,
     onAddToCart,
 }) {
-    const [isLoved, setIsLoved] = useState(initialIsLoved);
-    const [roleUser, setRoleUser] = useState("pelanggan");
+    const [isLoved, setIsLoved]     = useState(initialIsLoved);
+    const [roleUser, setRoleUser]   = useState("pelanggan");
     const [showModal, setShowModal] = useState(false);
-    const [status, setStatus] = useState(true);
+    const [status, setStatus]       = useState(true);
     const navigate = useNavigate();
-
-    const imgSrc = getDriveThumbnail(image, "w600-h600");
+    const imgSrc   = getDriveThumbnail(image, "w600-h600");
 
     useEffect(() => {
-        const fetchStatus = async () => {
-            const foodSnap = await getDoc(doc(db, "foods", id));
-            if (foodSnap.exists()) {
-                setStatus(foodSnap.data().status ?? true);
-            }
-        };
-        fetchStatus();
+        getDoc(doc(db, "foods", id)).then((snap) => {
+            if (snap.exists()) setStatus(snap.data().status ?? true);
+        });
+        if (auth.currentUser?.uid) {
+            getDoc(doc(db, "users", auth.currentUser.uid)).then((snap) => {
+                if (snap.exists()) setRoleUser(snap.data().role);
+            });
+        }
     }, [id]);
 
-    useEffect(() => {
-        const fetchRole = async () => {
-            const userId = auth.currentUser?.uid;
-            if (!userId) return;
-            const snap = await getDoc(doc(db, "users", userId));
-            if (snap.exists()) setRoleUser(snap.data().role);
-        };
-        fetchRole();
-    }, []);
-
-    const toggleLove = async () => {
-        const newLoveState = !isLoved;
-        setIsLoved(newLoveState);
-        try {
-            if (newLoveState) await addToFavorites(id);
-            else await removeFromFavorites(id);
-        } catch (err) {
-            console.error("Gagal memperbarui favorit:", err);
-        }
+    const handleLove = async (e) => {
+        e.stopPropagation();
+        const next = !isLoved;
+        setIsLoved(next);
+        try { await toggleFavorite(id, !next); }
+        catch { setIsLoved(!next); }
     };
 
     const handleToggleStatus = async () => {
         try {
-            const newStatus = !status;
-            await updateDoc(doc(db, "foods", id), { status: newStatus });
-            setStatus(newStatus);
-            alert(`Status makanan diubah menjadi ${newStatus ? "READY" : "HABIS"}`);
-        } catch (err) {
-            console.error("Gagal mengubah status:", err);
-            alert("Gagal mengubah status makanan!");
-        }
+            const next = !status;
+            await updateDoc(doc(db, "foods", id), { status: next });
+            setStatus(next);
+        } catch { alert("Gagal mengubah status!"); }
     };
 
     return (
         <>
+            {/* ── Card ── */}
             <div
-                className="relative bg-white rounded-xl shadow-md p-3 sm:p-4 hover:shadow-lg transition-shadow duration-200 cursor-pointer w-full max-w-[320px] sm:max-w-sm mx-auto"
                 onClick={() => setShowModal(true)}
+                className="relative bg-white rounded-2xl overflow-hidden cursor-pointer group"
+                style={{ boxShadow: "0 2px 12px rgba(0,0,0,.07)", border: "1px solid #F3F4F6" }}
             >
-                {!status && (
-                    <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">
-                        Habis
-                    </span>
-                )}
-
-                <button
-                    onClick={(e) => { e.stopPropagation(); toggleLove(); }}
-                    className="absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow-sm"
-                >
-                    <img
-                        src={isLoved ? "../assets/Love.svg" : "../assets/Love-gray.svg"}
-                        alt="favorite"
-                        className="h-6 w-6"
-                    />
-                </button>
-
-                <div className="rounded-xl h-32 w-full overflow-hidden mb-2 sm:mb-3">
+                {/* Image */}
+                <div className="relative h-36 overflow-hidden bg-gray-100">
                     <img
                         src={imgSrc}
                         alt={title}
-                        className={`w-full h-full object-cover transition ${!status ? "grayscale opacity-60" : ""}`}
+                        className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                            !status ? "grayscale opacity-60" : ""
+                        }`}
                     />
+                    {!status && (
+                        <span className="absolute top-2 left-2 badge badge-error text-[10px]">Habis</span>
+                    )}
+                    <button
+                        onClick={handleLove}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white flex items-center justify-center"
+                        style={{ boxShadow: "0 2px 8px rgba(0,0,0,.12)" }}
+                    >
+                        {isLoved
+                            ? <HeartIcon   className="w-4 h-4 text-red-500" />
+                            : <HeartOutline className="w-4 h-4 text-gray-400" />
+                        }
+                    </button>
                 </div>
 
-                <h3 className="font-semibold text-sm sm:text-base text-gray-800 truncate">{title}</h3>
-                <p className="text-xs sm:text-sm text-gray-500 mb-1 h-10 overflow-hidden">{desc}</p>
-
-                <div className="flex items-center justify-between mt-1">
-                    <div className="flex items-center text-orange-500 text-xs sm:text-sm gap-1">
-                        <StarIcon className="w-4 h-4" />
-                        {rating} ({review})
+                {/* Info */}
+                <div className="p-3">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 h-8">{desc}</p>
+                    <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-1">
+                            <StarIcon className="w-3.5 h-3.5 text-yellow-400" />
+                            <span className="text-xs text-gray-500">{rating ?? 0}</span>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">
+                            Rp {Number(price).toLocaleString("id-ID")}
+                        </span>
                     </div>
-                    <span className="text-sm sm:text-base font-medium text-gray-700">Rp {price}</span>
                 </div>
             </div>
 
+            {/* ── Modal ── */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-2 sm:p-4">
-                    <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-5 relative overflow-y-auto max-h-[90vh] sm:max-h-[85vh]">
-                        <button
-                            className="absolute top-4 right-4 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-2 shadow-md"
-                            onClick={() => setShowModal(false)}
-                        >
-                            <XMarkIcon className="h-5 w-5" />
-                        </button>
-
-                        <img
-                            src={imgSrc}
-                            alt={title}
-                            className="w-full h-48 object-cover rounded-xl mb-4"
-                        />
-
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">{title}</h2>
-                        <p className="text-gray-600 mb-3">{desc}</p>
-
-                        <div className="flex items-center gap-2 mb-4">
-                            <StarIcon className="w-5 h-5 text-orange-500" />
-                            <span className="text-gray-700 text-sm">{rating} ({review} ulasan)</span>
+                <div
+                    className="modal-overlay"
+                    onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
+                >
+                    <div
+                        className="bg-white w-full max-w-sm rounded-3xl overflow-hidden fade-in"
+                        style={{ boxShadow: "0 24px 64px rgba(0,0,0,.18)" }}
+                    >
+                        {/* Image */}
+                        <div className="relative h-52">
+                            <img src={imgSrc} alt={title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center"
+                                style={{ boxShadow: "0 2px 8px rgba(0,0,0,.15)" }}
+                            >
+                                <XMarkIcon className="w-5 h-5 text-gray-700" />
+                            </button>
                         </div>
 
-                        <p className="text-lg font-semibold text-gray-800 mb-5">Rp {price}</p>
+                        {/* Content */}
+                        <div className="p-5 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <h2 className="text-lg font-bold text-gray-900 leading-tight">{title}</h2>
+                                <span className="text-lg font-bold text-orange-500 whitespace-nowrap">
+                                    Rp {Number(price).toLocaleString("id-ID")}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+                            <div className="flex items-center gap-1.5 py-1">
+                                <StarIcon className="w-4 h-4 text-yellow-400" />
+                                <span className="text-sm text-gray-600 font-medium">
+                                    {rating ?? 0}
+                                </span>
+                                <span className="text-sm text-gray-400">
+                                    ({review ?? 0} ulasan)
+                                </span>
+                            </div>
 
-                        {roleUser === "pelanggan" ? (
-                            <button
-                                onClick={() => {
-                                    if (!status) return;
-                                    addToCart({ id, title, image: imgSrc, price });
-                                    onAddToCart?.();
-                                    setShowModal(false);
-                                }}
-                                disabled={!status}
-                                className={`w-full font-semibold py-2 rounded-lg transition ${
-                                    status
-                                        ? "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
-                                        : "bg-gray-400 text-gray-200 cursor-not-allowed"
-                                }`}
-                            >
-                                {status ? "Tambahkan ke keranjang" : "Habis"}
-                            </button>
-                        ) : (
-                            <>
+                            {roleUser === "pelanggan" ? (
                                 <button
                                     onClick={() => {
-                                        navigate("/edit-food", { state: { foodId: id } });
+                                        if (!status) return;
+                                        addToCart({ id, title, image: imgSrc, price });
+                                        onAddToCart?.();
                                         setShowModal(false);
                                     }}
-                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition mb-2"
+                                    disabled={!status}
+                                    className="btn btn-primary btn-full"
                                 >
-                                    Edit makanan
+                                    {status ? "Tambah ke Keranjang" : "Stok Habis"}
                                 </button>
-                                <button
-                                    onClick={handleToggleStatus}
-                                    className={`w-full font-semibold py-2 rounded-lg transition text-white ${
-                                        status
-                                            ? "bg-green-500 hover:bg-green-600"
-                                            : "bg-red-500 hover:bg-red-600"
-                                    }`}
-                                >
-                                    {status ? "Tandai Habis" : "Tandai Ready"}
-                                </button>
-                            </>
-                        )}
+                            ) : (
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => { navigate("/edit-food", { state: { foodId: id } }); setShowModal(false); }}
+                                        className="btn btn-secondary btn-full"
+                                    >
+                                        Edit Menu
+                                    </button>
+                                    <button
+                                        onClick={handleToggleStatus}
+                                        className={`btn btn-full ${
+                                            status ? "btn-danger" : "btn btn-full bg-green-50 text-green-700 rounded-full font-semibold py-3"
+                                        }`}
+                                    >
+                                        {status ? "Tandai Habis" : "Tandai Tersedia"}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

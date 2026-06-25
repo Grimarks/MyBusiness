@@ -5,112 +5,119 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Loader from "../components/Loader";
 
 export default function LoginPage() {
-    const [email, setEmail]               = useState("");
-    const [password, setPassword]         = useState("");
-    const [showPassword, setShowPassword] = useState(false);
-    const [error, setError]               = useState("");
-    const [loading, setLoading]           = useState(false);
+    const [email, setEmail]       = useState("");
+    const [password, setPassword] = useState("");
+    const [showPw, setShowPw]     = useState(false);
+    const [error, setError]       = useState("");
+    const [loading, setLoading]   = useState(false);
     const navigate = useNavigate();
     const auth     = getAuth();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError("");
-
         if (password.length < 6 || password.length > 12) {
-            setError("Password HARUS minimal 6 karakter dan maksimal 12 karakter!");
+            setError("Password harus 6–12 karakter.");
             return;
         }
-
         setLoading(true);
         try {
             await signInWithEmailAndPassword(auth, email, password);
             navigate("/home");
-        } catch (err) {
-            setError("Salah Password / Salah Email");
-            console.error("Login failed:", err);
-        } finally {
-            setLoading(false);
-        }
+        } catch {
+            setError("Email atau password salah. Silakan coba lagi.");
+        } finally { setLoading(false); }
     };
 
-    if (loading) return <Loader message="Sedang memproses..." />;
+    if (loading) return <Loader message="Masuk..." />;
 
     return (
-        <div className="min-h-screen font-sans bg-gradient-to-br from-orange-500 to-yellow-400 flex flex-col">
-            <div className="text-white px-6 pt-12 pb-8">
-                <h1 className="text-3xl font-bold">Masuk</h1>
-                <p className="text-sm mt-2">Silahkan masukkan akun anda.</p>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+            {/* Brand header */}
+            <div
+                className="px-6 pt-16 pb-14"
+                style={{ background: "linear-gradient(160deg,#F97316,#EAB308)" }}
+            >
+                <div className="max-w-sm mx-auto">
+                    <h1 className="text-white text-3xl font-bold">Selamat datang! 👋</h1>
+                    <p className="text-white/80 text-sm mt-2">Masuk ke akun Anda untuk melanjutkan.</p>
+                </div>
             </div>
 
-            <div className="bg-white pt-10 pb-16 px-6 flex-grow flex flex-col justify-between rounded-tr-[150px]">
-                <form onSubmit={handleLogin} className="flex flex-col px-6 space-y-6">
-                    <h2 className="text-3xl font-bold text-orange-600">Masuk</h2>
+            {/* Form card */}
+            <div className="flex-1 px-5 -mt-6">
+                <div className="max-w-sm mx-auto bg-white rounded-3xl p-6 shadow-lg">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Masuk</h2>
 
-                    <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl">
-                        <input
-                            type="email"
-                            placeholder="you@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="bg-transparent w-full focus:outline-none text-gray-700"
-                            required
-                        />
-                    </div>
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="form-group">
+                            <label className="label">Email</label>
+                            <input
+                                type="email"
+                                placeholder="you@example.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="input input-muted"
+                                required
+                            />
+                        </div>
 
-                    <div className="flex items-center bg-[#F2F2F2] px-4 py-3 rounded-xl relative">
-                        <input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="*********"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="bg-transparent w-full focus:outline-none text-gray-700"
-                            required
-                        />
+                        <div className="form-group">
+                            <label className="label">Password</label>
+                            <div className="relative">
+                                <input
+                                    type={showPw ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="input input-muted pr-11"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPw(!showPw)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    {showPw ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        {error && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100">
+                                <span className="text-sm text-red-600">{error}</span>
+                            </div>
+                        )}
+
+                        <div className="text-right">
+                            <Link to="/forgot-password" className="text-sm text-orange-600 font-medium hover:underline">
+                                Lupa Password?
+                            </Link>
+                        </div>
+
+                        <button type="submit" className="btn btn-primary btn-full btn-lg">
+                            Masuk
+                        </button>
+                    </form>
+
+                    <p className="text-center text-sm text-gray-500 mt-6">
+                        Belum punya akun?{" "}
+                        <Link to="/select-account" className="text-orange-600 font-semibold hover:underline">
+                            Daftar di sini
+                        </Link>
+                    </p>
+
+                    <div className="mt-4 pt-4 border-t border-gray-100 text-center">
                         <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 text-gray-500"
+                            onClick={() => navigate("/admin")}
+                            className="text-xs text-gray-400 hover:text-gray-600"
                         >
-                            {showPassword ? (
-                                <EyeSlashIcon className="w-5 h-5" />
-                            ) : (
-                                <EyeIcon className="w-5 h-5" />
-                            )}
+                            Admin Portal →
                         </button>
                     </div>
-
-                    {error && (
-                        <div className="bg-red-100 text-red-600 text-sm px-3 py-2 rounded-lg border border-red-300 transition-all duration-300">
-                            ⚠️ {error}
-                        </div>
-                    )}
-
-                    <button
-                        type="submit"
-                        className="block text-center bg-[#FF8C4B] text-white py-3 rounded-xl font-bold text-lg"
-                    >
-                        Masuk
-                    </button>
-                </form>
-
-                <div className="text-center text-sm mt-4">
-                    <Link to="/forgot-password">
-                        <span className="text-orange-600 font-semibold cursor-pointer hover:underline">
-                            Lupa Password?
-                        </span>
-                    </Link>
-                </div>
-
-                <div className="text-center text-sm mt-6">
-                    Belum punya akun?{" "}
-                    <Link to="/select-account">
-                        <span className="font-bold text-black cursor-pointer hover:underline">
-                            Daftar di sini
-                        </span>
-                    </Link>
                 </div>
             </div>
+            <div className="h-8" />
         </div>
     );
 }

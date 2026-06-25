@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { auth, db } from "../firebaseConfig.js";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { StarIcon } from "@heroicons/react/24/outline";
+import { SparklesIcon } from "@heroicons/react/24/outline";
 import { getDriveThumbnail } from "../utils/drive";
 
 import Header from "../components/Header";
@@ -13,178 +13,120 @@ import BottomNav from "../components/BottomNav";
 import IncomingOrderCard from "../components/IncomingOrderCard";
 import Loader from "../components/Loader";
 
-function mulberry32(seed) {
+function seededRng(seed) {
     let t = seed;
-    return function () {
-        t += 0x6d2b79f5;
-        let r = Math.imul(t ^ (t >>> 15), 1 | t);
-        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
-        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-    };
+    return () => { t += 0x6d2b79f5; let r = Math.imul(t ^ (t >>> 15), 1 | t); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; };
 }
-
-const shuffleWithSeed = (array, seed) => {
-    const result = [...array];
-    const random = mulberry32(seed);
-    for (let i = result.length - 1; i > 0; i--) {
-        const j = Math.floor(random() * (i + 1));
-        [result[i], result[j]] = [result[j], result[i]];
-    }
-    return result;
+const shuffleSeed = (arr, seed) => {
+    const r = [...arr], rand = seededRng(seed);
+    for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; }
+    return r;
 };
-
-const getDailySeed = () => {
-    const dateStr = new Date().toISOString().split("T")[0];
-    return parseInt(dateStr.replace(/-/g, ""), 10);
-};
+const dailySeed = () => parseInt(new Date().toISOString().split("T")[0].replace(/-/g,""), 10);
 
 export default function PilihanPage() {
     const [role, setRole]             = useState(null);
-    const [makananList, setMakananList] = useState([]);
+    const [list, setList]             = useState([]);
+    const [favIds, setFavIds]         = useState([]);
     const [filterLocation, setFilterLocation] = useState("All");
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading]       = useState(true);
     const [error, setError]           = useState(null);
-    const [favoriteIds, setFavoriteIds] = useState([]);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(async (user) => {
+        auth.onAuthStateChanged(async (user) => {
             if (!user) return setRole("guest");
-            try {
-                const snap = await getDocs(
-                    query(collection(db, "users"), where("uid", "==", user.uid))
-                );
-                if (!snap.empty) setRole(snap.docs[0].data().role);
-            } catch (err) {
-                console.error("Gagal ambil role user:", err);
-            }
+            const snap = await getDocs(query(collection(db, "users"), where("uid","==",user.uid)));
+            if (!snap.empty) setRole(snap.docs[0].data().role);
         });
-        return () => unsubscribe();
     }, []);
 
     useEffect(() => {
-        const fetchFavoriteIds = async () => {
+        getDocs(collection(db, "favorites")).then((snap) =>
+            setFavIds(snap.docs.map((d) => d.data().foodId))
+        );
+    }, []);
+
+    useEffect(() => {
+        if (role !== "pelanggan") { setLoading(false); return; }
+        const load = async () => {
+            setLoading(true); setError(null);
             try {
-                const snap = await getDocs(collection(db, "favorites"));
-                setFavoriteIds(snap.docs.map((d) => d.data().foodId));
-            } catch (err) {
-                console.error("Gagal memuat data favorit:", err);
-            }
+                const ref = collection(db, "foods");
+                const q   = filterLocation !== "All" ? query(ref, where("location","==",filterLocation)) : ref;
+                const snap = await getDocs(q);
+                const data = snap.docs.map((d) => ({
+                    id: d.id, ...d.data(),
+                    image: getDriveThumbnail(d.data().image) || "/default-food.png",
+                })).filter((i) => !searchTerm || i.name?.toLowerCase().includes(searchTerm.toLowerCase()));
+                setList(shuffleSeed(data, dailySeed()));
+            } catch { setError("Gagal memuat data."); }
+            finally  { setLoading(false); }
         };
-        fetchFavoriteIds();
-    }, []);
-
-    useEffect(() => {
-        if (role === "pelanggan") {
-            const fetchMakanan = async () => {
-                try {
-                    setLoading(true);
-                    setError(null);
-
-                    const ref = collection(db, "foods");
-                    const q   = filterLocation !== "All"
-                        ? query(ref, where("location", "==", filterLocation))
-                        : ref;
-
-                    const snapshot = await getDocs(q);
-                    const allData  = snapshot.docs.map((d) => ({
-                        id: d.id,
-                        ...d.data(),
-                        image: getDriveThumbnail(d.data().image) || "/default-food.png",
-                    }));
-
-                    const filtered = allData.filter(
-                        (item) =>
-                            searchTerm === "" ||
-                            item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            item.description?.toLowerCase().includes(searchTerm.toLowerCase())
-                    );
-
-                    setMakananList(shuffleWithSeed(filtered, getDailySeed()));
-                } catch (err) {
-                    console.error("Error fetching makanan:", err);
-                    setError("Gagal memuat data makanan. Coba lagi nanti.");
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchMakanan();
-        } else if (role) {
-            setLoading(false);
-        }
+        load();
     }, [role, filterLocation, searchTerm]);
 
-    if (loading) return <Loader message="Memuat pilihan makanan..." />;
-    if (error)   return <div className="p-4 text-red-500 text-center">{error}</div>;
+    if (loading) return <Loader message="Memuat pilihan hari ini..." />;
+    if (error)   return <div className="flex items-center justify-center min-h-screen text-sm text-red-500">{error}</div>;
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-yellow-400 pb-24">
+    const TopBar = () => (
+        <div style={{ background: "linear-gradient(160deg,#F97316,#EAB308)", borderRadius: "0 0 24px 24px" }}>
             <Header />
-
             {role === "pelanggan" && (
-                <main className="container mx-auto p-4 max-w-6xl">
-                    <img
-                        src="/promo-2.png"
-                        alt="Promo Pilihan"
-                        className="object-contain rounded-3xl mb-4 w-full max-h-48 sm:max-h-64 md:max-h-72"
-                    />
-                    <SearchBar
-                        placeholder="Mau coba makanan apa?"
-                        searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
-                    />
-                    <CategoryFilter
-                        filterLocation={filterLocation}
-                        setFilterLocation={setFilterLocation}
-                    />
+                <SearchBar placeholder="Mau coba makanan apa?" searchTerm={searchTerm} setSearchTerm={setSearchTerm} className="pb-4" />
+            )}
+        </div>
+    );
 
-                    {makananList.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 p-4 transition-all duration-300">
-                            {makananList.map((item) => (
-                                <FoodCard
-                                    key={item.id}
-                                    id={item.id}
-                                    title={item.name}
-                                    desc={item.description}
-                                    image={item.image}
-                                    price={item.price}
-                                    rating={item.rating}
-                                    review={item.review}
-                                    isLoved={favoriteIds.includes(item.id)}
-                                />
+    if (role === "pelanggan") {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <TopBar />
+                <div className="bg-white shadow-sm">
+                    <CategoryFilter filterLocation={filterLocation} setFilterLocation={setFilterLocation} />
+                </div>
+
+                {/* Daily banner */}
+                <div className="px-4 pt-4 max-w-5xl mx-auto">
+                    <div className="rounded-2xl bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-100 px-4 py-3 flex items-center gap-3 mb-4">
+                        <SparklesIcon className="w-5 h-5 text-orange-400 flex-shrink-0" />
+                        <p className="text-sm text-orange-700 font-medium">Pilihan spesial hari ini untuk kamu!</p>
+                    </div>
+                </div>
+
+                <div className="px-4 pb-nav max-w-5xl mx-auto">
+                    {list.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {list.map((item) => (
+                                <FoodCard key={item.id} id={item.id} title={item.name} desc={item.description}
+                                    image={item.image} price={item.price} rating={item.rating} review={item.review}
+                                    isLoved={favIds.includes(item.id)} />
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-12">
-                            <StarIcon className="mx-auto text-gray-300 text-6xl mb-4" />
-                            <h2 className="text-xl font-semibold text-gray-700 mb-2">
-                                Belum Ada Makanan Menarik
-                            </h2>
-                            <p className="text-gray-500 text-sm mb-6">
-                                Yuk jelajahi berbagai menu lezat yang bisa kamu coba hari ini!
-                            </p>
-                            <Link
-                                to="/home"
-                                className="bg-orange-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-md hover:shadow-lg"
-                            >
-                                Jelajahi Sekarang
-                            </Link>
+                        <div className="flex flex-col items-center py-20 text-center">
+                            <span className="text-5xl mb-3">🍽️</span>
+                            <p className="text-gray-500 text-sm">Belum ada menu tersedia.</p>
+                            <Link to="/home" className="btn btn-primary btn-sm mt-4">Kembali ke Home</Link>
                         </div>
                     )}
-                </main>
-            )}
+                </div>
+                <BottomNav active="Pilihan" />
+            </div>
+        );
+    }
 
-            {role === "pemilik" && (
-                <main className="container mx-auto p-4 max-w-6xl">
-                    <div className="bg-white rounded-2xl shadow-md p-4 mb-6">
-                        <h2 className="text-2xl font-bold text-orange-500 mb-2">
-                            Pesanan Masuk Hari Ini 🍱
-                        </h2>
-                        <IncomingOrderCard />
-                    </div>
-                </main>
-            )}
-
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <TopBar />
+            <div className="px-4 pt-5 pb-nav max-w-2xl mx-auto">
+                <div className="bg-white rounded-2xl p-4" style={{ border: "1px solid #F3F4F6", boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                    <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">
+                        Pesanan Masuk Hari Ini 🍱
+                    </h2>
+                    <IncomingOrderCard />
+                </div>
+            </div>
             <BottomNav active="Pilihan" />
         </div>
     );

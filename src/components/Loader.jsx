@@ -1,12 +1,13 @@
 import React from "react";
 
-export default function Loader({ message }) {
+export default function Loader({ message = "Memuat..." }) {
     return (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] w-full px-4 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-t-2 border-b-2 border-orange-500" />
-            {message && (
-                <p className="mt-4 text-gray-600 text-sm sm:text-base">{message}</p>
-            )}
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-gray-50">
+            <div className="relative w-14 h-14">
+                <div className="absolute inset-0 rounded-full border-4 border-orange-100" />
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-orange-500 animate-spin" />
+            </div>
+            <p className="text-sm font-medium text-gray-500">{message}</p>
         </div>
     );
 }

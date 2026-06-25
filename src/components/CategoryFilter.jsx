@@ -1,66 +1,31 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
 
-const LOCATION_FILTER_PATHS = ["/pilihan", "/favorite"];
+const LOCATION_PAGES = ["/pilihan", "/favorite"];
 
-const FOOD_CATEGORIES = [
-    "All",
-    "Cepat Saji",
-    "Ayam Geprek",
-    "Mie",
-    "Sayuran",
-    "Steak",
-    "Jamur",
-    "Kopi",
-];
-
-const LOCATIONS = ["All", "Bukit", "Indralaya"];
-
-const containerClass =
-    "flex gap-2 px-3 sm:px-6 py-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent";
+const FOOD_CATS  = ["All","Cepat Saji","Ayam Geprek","Mie","Sayuran","Steak","Jamur","Kopi"];
+const LOCATIONS  = ["All","Bukit","Indralaya"];
 
 export default function CategoryFilter({
-    filterLocation,
-    setFilterLocation,
-    filterFoodCategory,
-    setFilterFoodCategory,
+    filterLocation, setFilterLocation,
+    filterFoodCategory, setFilterFoodCategory,
 }) {
     const { pathname } = useLocation();
-    const isLocationFilterPage = LOCATION_FILTER_PATHS.includes(pathname);
+    const isLocPage = LOCATION_PAGES.includes(pathname);
 
-    if (isLocationFilterPage) {
-        return (
-            <div className={containerClass}>
-                {LOCATIONS.map((loc) => (
-                    <button
-                        key={loc}
-                        onClick={() => setFilterLocation(loc)}
-                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition ${
-                            filterLocation === loc
-                                ? "bg-orange-500 text-white"
-                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                        }`}
-                    >
-                        {loc === "All" ? "All" : `📍 ${loc}`}
-                    </button>
-                ))}
-            </div>
-        );
-    }
+    const items  = isLocPage ? LOCATIONS : FOOD_CATS;
+    const active = isLocPage ? filterLocation : filterFoodCategory;
+    const setFn  = isLocPage ? setFilterLocation : setFilterFoodCategory;
 
     return (
-        <div className={containerClass}>
-            {FOOD_CATEGORIES.map((category) => (
+        <div className="scroll-x flex gap-2 px-4 py-2">
+            {items.map((item) => (
                 <button
-                    key={category}
-                    onClick={() => setFilterFoodCategory(category)}
-                    className={`flex-shrink-0 px-4 py-2 border rounded-full text-sm transition ${
-                        filterFoodCategory === category
-                            ? "bg-orange-500 text-white border-orange-500"
-                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
-                    }`}
+                    key={item}
+                    onClick={() => setFn(item)}
+                    className={`chip ${active === item ? "chip-active" : "chip-inactive"}`}
                 >
-                    {category}
+                    {isLocPage && item !== "All" ? `📍 ${item}` : item}
                 </button>
             ))}
         </div>

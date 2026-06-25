@@ -7,53 +7,36 @@ export default function SearchBar({
     setSearchTerm,
     className = "",
 }) {
-    const [localValue, setLocalValue] = useState(searchTerm || "");
+    const [local, setLocal] = useState(searchTerm || "");
 
-    useEffect(() => {
-        setLocalValue(searchTerm || "");
-    }, [searchTerm]);
+    useEffect(() => { setLocal(searchTerm || ""); }, [searchTerm]);
 
-    const handleSearch = () => setSearchTerm(localValue.trim());
-
-    const handleClear = () => {
-        setLocalValue("");
-        setSearchTerm("");
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            handleSearch();
-        }
-    };
+    const commit = () => setSearchTerm(local.trim());
+    const clear  = () => { setLocal(""); setSearchTerm(""); };
 
     return (
-        <div className={`mx-2 sm:mx-4 mt-2 mb-4 ${className}`}>
-            <div className="flex items-center bg-white rounded-full shadow p-2 sm:p-3 focus-within:ring-2 focus-within:ring-orange-400 w-full max-w-md mx-auto">
+        <div className={`px-4 py-2 ${className}`}>
+            <div
+                className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white"
+                style={{ boxShadow: "0 2px 10px rgba(0,0,0,.08)" }}
+            >
+                <MagnifyingGlassIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <input
                     type="text"
+                    value={local}
                     placeholder={placeholder}
-                    value={localValue}
-                    onChange={(e) => setLocalValue(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="flex-1 outline-none text-sm sm:text-base text-gray-700"
+                    onChange={(e) => setLocal(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && commit()}
+                    className="flex-1 text-sm text-gray-800 bg-transparent outline-none placeholder:text-gray-400"
                 />
-                {localValue && (
+                {local && (
                     <button
-                        type="button"
-                        onClick={handleClear}
-                        className="p-1 rounded-full hover:bg-gray-100 mr-2"
+                        onClick={clear}
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 transition-colors flex-shrink-0"
                     >
-                        <XMarkIcon className="h-5 w-5 text-gray-400" />
+                        <XMarkIcon className="w-3 h-3 text-gray-500" />
                     </button>
                 )}
-                <button
-                    type="button"
-                    onClick={handleSearch}
-                    className="p-1 rounded-full hover:bg-orange-100"
-                >
-                    <MagnifyingGlassIcon className="h-5 w-5 text-orange-500" />
-                </button>
             </div>
         </div>
     );

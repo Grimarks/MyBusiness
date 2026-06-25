@@ -1,87 +1,95 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
+import { ArrowLeftIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 import Loader from "../components/Loader";
 
 export default function ForgotPasswordPage() {
     const [email, setEmail]     = useState("");
     const [error, setError]     = useState("");
-    const [success, setSuccess] = useState("");
+    const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const auth     = getAuth();
 
     const handleReset = async (e) => {
         e.preventDefault();
-        setError("");
-        setSuccess("");
-
-        if (!email.includes("@")) {
-            setError("Masukkan email yang valid!");
-            return;
-        }
-
+        setError(""); setSuccess(false);
+        if (!email.includes("@")) return setError("Masukkan email yang valid.");
         setLoading(true);
         try {
             await sendPasswordResetEmail(auth, email);
-            setSuccess("📩 Email reset password telah dikirim! Periksa kotak masuk atau folder spam kamu.");
+            setSuccess(true);
         } catch (err) {
-            console.error("Reset gagal:", err);
-            if (err.code === "auth/user-not-found") {
-                setError("Email tidak ditemukan. Pastikan kamu sudah terdaftar.");
-            } else if (err.code === "auth/invalid-email") {
-                setError("Format email tidak valid.");
-            } else {
-                setError("Terjadi kesalahan di server. Coba lagi nanti.");
-            }
-        } finally {
-            setLoading(false);
-        }
+            if (err.code === "auth/user-not-found") setError("Email tidak terdaftar.");
+            else if (err.code === "auth/invalid-email") setError("Format email tidak valid.");
+            else setError("Terjadi kesalahan. Coba lagi nanti.");
+        } finally { setLoading(false); }
     };
 
-    if (loading) return <Loader message="Mengirim email reset password..." />;
+    if (loading) return <Loader message="Mengirim email reset..." />;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-400 via-orange-500 to-yellow-400 flex items-center justify-center px-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
-                <h1 className="text-3xl font-extrabold text-orange-600 text-center mb-6">
-                    Lupa Password
-                </h1>
-                <p className="text-gray-500 text-center text-sm mb-6">
-                    Masukkan email akunmu. Kami akan kirim link untuk reset password.
-                </p>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+            <div className="px-6 pt-14 pb-14" style={{ background: "linear-gradient(160deg,#F97316,#EAB308)" }}>
+                <button onClick={() => navigate(-1)} className="mb-4 w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                    <ArrowLeftIcon className="w-5 h-5 text-white" />
+                </button>
+                <h1 className="text-white text-2xl font-bold">Lupa Password?</h1>
+                <p className="text-white/80 text-sm mt-1">Kami akan kirim link reset ke email kamu.</p>
+            </div>
 
-                <form onSubmit={handleReset} className="space-y-4">
-                    <input
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-400 outline-none transition"
-                        required
-                    />
+            <div className="flex-1 px-5 -mt-6 pb-8">
+                <div className="max-w-sm mx-auto bg-white rounded-3xl p-6 shadow-lg">
+                    {success ? (
+                        <div className="text-center py-6">
+                            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                                <EnvelopeIcon className="w-8 h-8 text-green-600" />
+                            </div>
+                            <h3 className="font-bold text-gray-900 text-lg">Email Terkirim!</h3>
+                            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                                Periksa inbox atau folder spam kamu untuk link reset password.
+                            </p>
+                            <button
+                                onClick={() => navigate("/loginpage")}
+                                className="btn btn-primary btn-full btn-lg mt-6"
+                            >
+                                Kembali ke Login
+                            </button>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleReset} className="space-y-4">
+                            <div className="form-group">
+                                <label className="label">Email</label>
+                                <input
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="input input-muted"
+                                    required
+                                />
+                            </div>
 
-                    {error && (
-                        <p className="text-red-500 text-sm text-center font-medium">{error}</p>
+                            {error && (
+                                <div className="p-3 rounded-xl bg-red-50 border border-red-100">
+                                    <p className="text-sm text-red-600">{error}</p>
+                                </div>
+                            )}
+
+                            <button type="submit" className="btn btn-primary btn-full btn-lg">
+                                Kirim Link Reset
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate("/loginpage")}
+                                className="btn btn-ghost btn-full"
+                            >
+                                Batal
+                            </button>
+                        </form>
                     )}
-                    {success && (
-                        <p className="text-green-600 text-sm text-center font-medium">{success}</p>
-                    )}
-
-                    <button
-                        type="submit"
-                        className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold text-lg hover:bg-orange-600 transition transform hover:scale-[1.02]"
-                    >
-                        Kirim Link Reset
-                    </button>
-
-                    <p
-                        onClick={() => navigate("/loginpage")}
-                        className="text-center text-sm text-orange-600 mt-3 cursor-pointer hover:underline"
-                    >
-                        Kembali ke Login
-                    </p>
-                </form>
+                </div>
             </div>
         </div>
     );
